@@ -257,12 +257,14 @@ export type Database = {
           is_for_sale: boolean
           min_stock: number
           name: string
+          package_count: number | null
           purchase_price: number
           quantity: number
           requires_kitchen: boolean
           sale_price: number
           status: Database["public"]["Enums"]["stock_status"]
           unit_base: string | null
+          units_per_package: number | null
           updated_at: string
         }
         Insert: {
@@ -274,12 +276,14 @@ export type Database = {
           is_for_sale?: boolean
           min_stock?: number
           name: string
+          package_count?: number | null
           purchase_price?: number
           quantity?: number
           requires_kitchen?: boolean
           sale_price?: number
           status?: Database["public"]["Enums"]["stock_status"]
           unit_base?: string | null
+          units_per_package?: number | null
           updated_at?: string
         }
         Update: {
@@ -291,12 +295,14 @@ export type Database = {
           is_for_sale?: boolean
           min_stock?: number
           name?: string
+          package_count?: number | null
           purchase_price?: number
           quantity?: number
           requires_kitchen?: boolean
           sale_price?: number
           status?: Database["public"]["Enums"]["stock_status"]
           unit_base?: string | null
+          units_per_package?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -620,7 +626,13 @@ export type Database = {
         | "entregado"
       payment_method: "cash" | "transfer" | "qr"
       payment_status: "no_cobrado" | "cobrado"
-      product_category: "drinks" | "cocktails" | "food" | "supplies" | "others"
+      product_category:
+        | "drinks"
+        | "cocktails"
+        | "food"
+        | "supplies"
+        | "others"
+        | "semi_elaborated"
       stock_status: "normal" | "low" | "critical"
     }
     CompositeTypes: {
@@ -772,7 +784,14 @@ export const Constants = {
       ],
       payment_method: ["cash", "transfer", "qr"],
       payment_status: ["no_cobrado", "cobrado"],
-      product_category: ["drinks", "cocktails", "food", "supplies", "others"],
+      product_category: [
+        "drinks",
+        "cocktails",
+        "food",
+        "supplies",
+        "others",
+        "semi_elaborated",
+      ],
       stock_status: ["normal", "low", "critical"],
     },
   },

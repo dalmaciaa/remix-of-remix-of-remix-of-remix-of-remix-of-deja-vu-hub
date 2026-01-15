@@ -21,6 +21,9 @@ const toProduct = (row: any): Product => ({
   status: row.status as StockStatus,
   unitBase: row.unit_base || 'unidad',
   costPerUnit: row.cost_per_unit ? Number(row.cost_per_unit) : null,
+  unitsPerPackage: row.units_per_package ? Number(row.units_per_package) : 1,
+  packageCount: row.package_count ? Number(row.package_count) : 0,
+  isCompound: row.is_compound || false,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
@@ -44,7 +47,7 @@ export function useAddProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (product: Omit<Product, 'id' | 'status' | 'createdAt' | 'updatedAt'>) => {
+    mutationFn: async (product: Omit<Product, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'isCompound'>) => {
       const status = calculateStockStatus(product.quantity, product.minStock);
       
       const { data, error } = await supabase
@@ -59,6 +62,8 @@ export function useAddProduct() {
           status: status,
           unit_base: product.unitBase || 'unidad',
           cost_per_unit: product.costPerUnit || null,
+          units_per_package: product.unitsPerPackage || 1,
+          package_count: product.packageCount || 0,
         })
         .select()
         .single();
@@ -81,7 +86,7 @@ export function useUpdateProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Product, 'id' | 'status' | 'createdAt' | 'updatedAt'>> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Product, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'isCompound'>> }) => {
       // Get current product to calculate new status
       const { data: current } = await supabase
         .from('products')
@@ -102,6 +107,8 @@ export function useUpdateProduct() {
       if (updates.minStock !== undefined) updateData.min_stock = updates.minStock;
       if (updates.unitBase !== undefined) updateData.unit_base = updates.unitBase;
       if (updates.costPerUnit !== undefined) updateData.cost_per_unit = updates.costPerUnit;
+      if (updates.unitsPerPackage !== undefined) updateData.units_per_package = updates.unitsPerPackage;
+      if (updates.packageCount !== undefined) updateData.package_count = updates.packageCount;
 
       const { data, error } = await supabase
         .from('products')

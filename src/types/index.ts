@@ -1,5 +1,5 @@
-export type ProductCategory = 'drinks' | 'cocktails' | 'food' | 'supplies' | 'others';
-export type InventoryCategory = 'supplies' | 'drinks' | 'others';
+export type ProductCategory = 'drinks' | 'cocktails' | 'food' | 'supplies' | 'others' | 'semi_elaborated';
+export type InventoryCategory = 'supplies' | 'drinks' | 'others' | 'semi_elaborated';
 export type CatalogCategory = 'food' | 'cocktails' | 'drinks';
 export type PaymentMethod = 'cash' | 'transfer' | 'qr';
 export type ExpenseCategory = 'drinks' | 'suppliers' | 'staff' | 'events' | 'maintenance' | 'others';
@@ -18,6 +18,9 @@ export interface Product {
   status: StockStatus;
   unitBase: UnitType;
   costPerUnit: number | null;
+  unitsPerPackage: number;
+  packageCount: number;
+  isCompound?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

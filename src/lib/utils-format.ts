@@ -6,12 +6,14 @@ export const productCategoryLabels: Record<ProductCategory, string> = {
   food: 'Comida',
   supplies: 'Insumos',
   others: 'Otros',
+  semi_elaborated: 'Semielaborados',
 };
 
 export const inventoryCategoryLabels: Record<InventoryCategory, string> = {
   supplies: 'Insumos',
   drinks: 'Bebidas',
   others: 'Otros',
+  semi_elaborated: 'Semielaborados',
 };
 
 export const catalogCategoryLabels: Record<CatalogCategory, string> = {

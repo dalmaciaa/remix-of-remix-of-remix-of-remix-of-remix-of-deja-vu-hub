@@ -49,7 +49,7 @@ export default function Dashboard() {
   const isLoading = loadingProducts || loadingSales || loadingExpenses || loadingEvents;
 
   // Get date range based on quick filter
-  const getFilterDateRange = () => {
+  const getFilterDateRange = useMemo(() => {
     const now = new Date();
     switch (quickFilter) {
       case 'today':
@@ -62,28 +62,61 @@ export default function Dashboard() {
         if (dateRange?.from && dateRange?.to) {
           return { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
         }
+        // Default to today if custom but no dates selected
+        return { start: startOfDay(now), end: endOfDay(now) };
+      default:
         return { start: startOfDay(now), end: endOfDay(now) };
     }
-  };
+  }, [quickFilter, dateRange]);
 
-  const filterRange = getFilterDateRange();
+  const filterRange = getFilterDateRange;
 
   // Filtered data based on date range
   const filteredSales = useMemo(() => {
-    return sales.filter(s => 
-      isWithinInterval(new Date(s.createdAt), filterRange)
-    );
+    if (!filterRange.start || !filterRange.end) return sales;
+    return sales.filter(s => {
+      try {
+        return isWithinInterval(new Date(s.createdAt), { start: filterRange.start, end: filterRange.end });
+      } catch {
+        return false;
+      }
+    });
   }, [sales, filterRange]);
 
   const filteredExpenses = useMemo(() => {
-    return expenses.filter(e => 
-      isWithinInterval(new Date(e.createdAt), filterRange)
-    );
+    if (!filterRange.start || !filterRange.end) return expenses;
+    return expenses.filter(e => {
+      try {
+        return isWithinInterval(new Date(e.createdAt), { start: filterRange.start, end: filterRange.end });
+      } catch {
+        return false;
+      }
+    });
   }, [expenses, filterRange]);
 
   const periodIncome = filteredSales.reduce((sum, s) => sum + s.totalAmount, 0);
   const periodExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const balance = periodIncome - periodExpenses;
+  
+  // Calcular costo de productos vendidos en el período (saldo negativo incluye gastos + costos)
+  const periodProductCosts = useMemo(() => {
+    return filteredSales.reduce((sum, sale) => {
+      return sum + sale.items.reduce((itemSum, item) => {
+        // Buscar el producto para obtener su costo
+        const product = products.find(p => p.id === item.productId);
+        if (product && product.costPerUnit) {
+          return itemSum + (product.costPerUnit * item.quantity);
+        }
+        // Si no tiene costPerUnit, usar purchasePrice como aproximación
+        if (product) {
+          return itemSum + (product.purchasePrice * item.quantity / Math.max(product.quantity, 1));
+        }
+        return itemSum;
+      }, 0);
+    }, 0);
+  }, [filteredSales, products]);
+
+  const periodNegativeBalance = periodExpenses + periodProductCosts;
+  const balance = periodIncome - periodNegativeBalance;
 
   // Today stats for comparison
   const todayIncome = sales
@@ -327,8 +360,8 @@ export default function Dashboard() {
           href="/sales"
         />
         <StatCard
-          title={`Gastos ${quickFilter === 'today' ? 'Hoy' : quickFilter === 'week' ? 'Semana' : quickFilter === 'month' ? 'Mes' : 'Período'}`}
-          value={formatCurrency(periodExpenses)}
+          title={`Saldo Negativo ${quickFilter === 'today' ? 'Hoy' : quickFilter === 'week' ? 'Semana' : quickFilter === 'month' ? 'Mes' : 'Período'}`}
+          value={formatCurrency(periodNegativeBalance)}
           icon={TrendingDown}
           variant="danger"
           href="/expenses"
