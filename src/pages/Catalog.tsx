@@ -318,6 +318,13 @@ export default function Catalog() {
     try {
       setSaving(true);
 
+      // First delete associated recipes
+      await supabase
+        .from('recipes')
+        .delete()
+        .eq('product_id', selectedProduct.id);
+
+      // Then delete the product
       const { error } = await supabase
         .from('products')
         .delete()
@@ -333,12 +340,12 @@ export default function Catalog() {
       setIsDeleteDialogOpen(false);
       setSelectedProduct(null);
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting product:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo eliminar el producto'
+        description: error.message || 'No se pudo eliminar el producto. Puede estar siendo usado en ventas.'
       });
     } finally {
       setSaving(false);
@@ -628,19 +635,6 @@ export default function Catalog() {
                   onValueChange={(value) => updateRecipeRow(index, 'unit', value)}
                 >
                   <SelectTrigger className="w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={ingredient.unit}
-                  onValueChange={(value) => updateRecipeRow(index, 'unit', value)}
-                >
-                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

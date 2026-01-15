@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -11,14 +11,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, useAdjustStock } from '@/hooks/useProducts';
 import { Product, InventoryCategory, StockAdjustment, UnitType } from '@/types';
 import { formatCurrency, inventoryCategoryLabels, stockStatusLabels, adjustmentReasonLabels, unitLabels } from '@/lib/utils-format';
-import { Plus, Pencil, Trash2, AlertTriangle, AlertCircle, Package, Search, Settings2, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, AlertCircle, Package, Search, Settings2, Loader2, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 type CategoryFilter = InventoryCategory | 'all';
 
-// Solo productos de inventario (insumos, bebidas, otros)
-const INVENTORY_CATEGORIES: InventoryCategory[] = ['supplies', 'drinks', 'others'];
+// Categorías de inventario (incluyendo semielaborados)
+const INVENTORY_CATEGORIES: InventoryCategory[] = ['supplies', 'drinks', 'others', 'semi_elaborated'];
+
+// Categorías que pueden ser ingredientes (no semielaborados, ya que esos no van como ingredientes base)
+const INGREDIENT_CATEGORIES: InventoryCategory[] = ['supplies', 'drinks', 'others'];
+
+interface Recipe {
+  id?: string;
+  ingredient_id: string;
+  quantity: string;
+  unit: string;
+  ingredient_name?: string;
+}
+
+const units = ['g', 'kg', 'ml', 'L', 'unidad', 'medida', 'oz'];
 
 export default function Inventory() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,9 +44,12 @@ export default function Inventory() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
+  const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [savingRecipe, setSavingRecipe] = useState(false);
 
-  const { data: allProducts = [], isLoading } = useProducts();
+  const { toast } = useToast();
+  const { data: allProducts = [], isLoading, refetch } = useProducts();
   const addProductMutation = useAddProduct();
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
@@ -39,6 +57,11 @@ export default function Inventory() {
 
   // Filtrar solo productos de inventario (no del catálogo de venta)
   const products = allProducts.filter(p => INVENTORY_CATEGORIES.includes(p.category as InventoryCategory));
+  
+  // Ingredientes disponibles (insumos, bebidas, otros - y semielaborados)
+  const availableIngredients = allProducts.filter(p => 
+    INGREDIENT_CATEGORIES.includes(p.category as InventoryCategory) || p.category === 'semi_elaborated'
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -49,6 +72,8 @@ export default function Inventory() {
     quantity: '',
     minStock: '',
     unitBase: 'unidad' as UnitType,
+    unitsPerPackage: '1',
+    packageCount: '0',
   });
 
   const [adjustData, setAdjustData] = useState({
@@ -56,6 +81,9 @@ export default function Inventory() {
     reason: 'correction' as StockAdjustment['reason'],
     notes: '',
   });
+
+  // Recipe state for semi_elaborated products
+  const [recipeIngredients, setRecipeIngredients] = useState<Recipe[]>([]);
 
   const filteredProducts = products.filter((p) => {
     const matchesCategory = activeTab === 'all' || p.category === activeTab;
@@ -84,27 +112,40 @@ export default function Inventory() {
       quantity: '',
       minStock: '',
       unitBase: 'unidad',
+      unitsPerPackage: '1',
+      packageCount: '0',
     });
   };
 
+  // Calcular cantidad total basado en paquetes y unidades por paquete
+  const calculateTotalQuantity = () => {
+    const unitsPerPkg = Number(formData.unitsPerPackage) || 1;
+    const pkgCount = Number(formData.packageCount) || 0;
+    return unitsPerPkg * pkgCount;
+  };
+
   const handleAdd = () => {
+    const totalQuantity = calculateTotalQuantity();
     // Si es insumo, el precio de venta es 0
     const salePrice = formData.category === 'supplies' ? 0 : Number(formData.salePrice);
-    const quantity = Number(formData.quantity);
     const purchasePrice = Number(formData.purchasePrice);
+    const unitsPerPackage = Number(formData.unitsPerPackage) || 1;
+    const packageCount = Number(formData.packageCount) || 0;
     
     // Calcular costo por unidad
-    const costPerUnit = quantity > 0 ? purchasePrice / quantity : null;
+    const costPerUnit = totalQuantity > 0 ? purchasePrice / totalQuantity : null;
     
     addProductMutation.mutate({
       name: formData.name,
       category: formData.category,
       purchasePrice: purchasePrice,
       salePrice: salePrice,
-      quantity: quantity,
+      quantity: totalQuantity,
       minStock: Number(formData.minStock),
       unitBase: formData.unitBase,
       costPerUnit: costPerUnit,
+      unitsPerPackage: unitsPerPackage,
+      packageCount: packageCount,
     }, {
       onSuccess: () => {
         setIsAddDialogOpen(false);
@@ -115,13 +156,15 @@ export default function Inventory() {
 
   const handleEdit = () => {
     if (!selectedProduct) return;
+    const totalQuantity = calculateTotalQuantity();
     // Si es insumo, el precio de venta es 0
     const salePrice = formData.category === 'supplies' ? 0 : Number(formData.salePrice);
-    const quantity = Number(formData.quantity);
     const purchasePrice = Number(formData.purchasePrice);
+    const unitsPerPackage = Number(formData.unitsPerPackage) || 1;
+    const packageCount = Number(formData.packageCount) || 0;
     
     // Calcular costo por unidad
-    const costPerUnit = quantity > 0 ? purchasePrice / quantity : null;
+    const costPerUnit = totalQuantity > 0 ? purchasePrice / totalQuantity : null;
     
     updateProductMutation.mutate({
       id: selectedProduct.id,
@@ -130,10 +173,12 @@ export default function Inventory() {
         category: formData.category,
         purchasePrice: purchasePrice,
         salePrice: salePrice,
-        quantity: quantity,
+        quantity: totalQuantity,
         minStock: Number(formData.minStock),
         unitBase: formData.unitBase,
         costPerUnit: costPerUnit,
+        unitsPerPackage: unitsPerPackage,
+        packageCount: packageCount,
       }
     }, {
       onSuccess: () => {
@@ -160,6 +205,8 @@ export default function Inventory() {
       quantity: product.quantity.toString(),
       minStock: product.minStock.toString(),
       unitBase: (product.unitBase as UnitType) || 'unidad',
+      unitsPerPackage: (product.unitsPerPackage || 1).toString(),
+      packageCount: (product.packageCount || 0).toString(),
     });
     setIsEditDialogOpen(true);
   };
@@ -172,6 +219,41 @@ export default function Inventory() {
       notes: '',
     });
     setIsAdjustDialogOpen(true);
+  };
+
+  const openRecipeDialog = async (product: Product) => {
+    setSelectedProduct(product);
+    
+    // Fetch existing recipes for this product
+    const { data: recipes } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('product_id', product.id);
+    
+    if (recipes && recipes.length > 0) {
+      const recipesWithNames = await Promise.all(
+        recipes.map(async (recipe) => {
+          const { data: ingredientData } = await supabase
+            .from('products')
+            .select('name')
+            .eq('id', recipe.ingredient_id)
+            .maybeSingle();
+          
+          return {
+            id: recipe.id,
+            ingredient_id: recipe.ingredient_id,
+            quantity: recipe.quantity.toString(),
+            unit: recipe.unit,
+            ingredient_name: ingredientData?.name || 'Desconocido'
+          };
+        })
+      );
+      setRecipeIngredients(recipesWithNames);
+    } else {
+      setRecipeIngredients([{ ingredient_id: '', quantity: '', unit: 'unidad' }]);
+    }
+    
+    setIsRecipeDialogOpen(true);
   };
 
   const handleAdjust = () => {
@@ -189,8 +271,91 @@ export default function Inventory() {
     });
   };
 
+  const handleSaveRecipe = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      setSavingRecipe(true);
+
+      // Delete existing recipes
+      await supabase
+        .from('recipes')
+        .delete()
+        .eq('product_id', selectedProduct.id);
+
+      // Insert new recipes
+      if (recipeIngredients.length > 0) {
+        const recipesToInsert = recipeIngredients
+          .filter(r => r.ingredient_id && r.quantity)
+          .map(r => ({
+            product_id: selectedProduct.id,
+            ingredient_id: r.ingredient_id,
+            quantity: parseFloat(r.quantity),
+            unit: r.unit
+          }));
+
+        if (recipesToInsert.length > 0) {
+          const { error } = await supabase
+            .from('recipes')
+            .insert(recipesToInsert);
+
+          if (error) throw error;
+        }
+      }
+
+      // Mark product as compound
+      await supabase
+        .from('products')
+        .update({ is_compound: true })
+        .eq('id', selectedProduct.id);
+
+      toast({
+        title: 'Receta guardada',
+        description: 'Los ingredientes han sido actualizados'
+      });
+
+      setIsRecipeDialogOpen(false);
+      refetch();
+    } catch (error: any) {
+      console.error('Error saving recipe:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'No se pudo guardar la receta'
+      });
+    } finally {
+      setSavingRecipe(false);
+    }
+  };
+
+  const addRecipeRow = () => {
+    setRecipeIngredients([...recipeIngredients, { ingredient_id: '', quantity: '', unit: 'unidad' }]);
+  };
+
+  const removeRecipeRow = (index: number) => {
+    setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
+  };
+
+  const updateRecipeRow = (index: number, field: string, value: string) => {
+    const updated = [...recipeIngredients];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Si se selecciona un ingrediente, auto-llenar la unidad
+    if (field === 'ingredient_id') {
+      const selectedIngredient = availableIngredients.find(ing => ing.id === value);
+      if (selectedIngredient) {
+        updated[index].unit = selectedIngredient.unitBase || 'unidad';
+      }
+    }
+    
+    setRecipeIngredients(updated);
+  };
+
   // Mostrar precio de venta solo si no es insumo
   const showSalePrice = formData.category !== 'supplies';
+  
+  // Mostrar separación de paquetes para insumos y bebidas
+  const showPackageSeparation = formData.category === 'supplies' || formData.category === 'drinks';
 
   const productFormContent = (
     <div className="space-y-4">
@@ -216,9 +381,15 @@ export default function Inventory() {
             <SelectContent>
               <SelectItem value="supplies">Insumos</SelectItem>
               <SelectItem value="drinks">Bebidas</SelectItem>
+              <SelectItem value="semi_elaborated">Semielaborado</SelectItem>
               <SelectItem value="others">Otros</SelectItem>
             </SelectContent>
           </Select>
+          {formData.category === 'semi_elaborated' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Los semielaborados se hacen con insumos y pueden usarse como ingredientes
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="unitBase">Unidad de medida</Label>
@@ -241,9 +412,67 @@ export default function Inventory() {
           </Select>
         </div>
       </div>
+      
+      {showPackageSeparation && (
+        <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
+          <p className="text-sm font-medium">Gestión de paquetes</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="unitsPerPackage">Unidades por paquete</Label>
+              <Input
+                id="unitsPerPackage"
+                type="number"
+                step="0.01"
+                value={formData.unitsPerPackage}
+                onChange={(e) => setFormData((prev) => ({ ...prev, unitsPerPackage: e.target.value }))}
+                placeholder="1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Ej: una botella de 750ml = 750 unidades
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="packageCount">Cantidad de paquetes</Label>
+              <Input
+                id="packageCount"
+                type="number"
+                step="0.01"
+                value={formData.packageCount}
+                onChange={(e) => setFormData((prev) => ({ ...prev, packageCount: e.target.value }))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <p className="text-sm text-primary">
+            Total: {calculateTotalQuantity()} {formData.unitBase}
+          </p>
+        </div>
+      )}
+      
+      {!showPackageSeparation && (
+        <div>
+          <Label htmlFor="quantity">Cantidad ({formData.unitBase})</Label>
+          <Input
+            id="quantity"
+            type="number"
+            step="0.01"
+            value={formData.quantity}
+            onChange={(e) => {
+              setFormData((prev) => ({ 
+                ...prev, 
+                quantity: e.target.value,
+                packageCount: e.target.value,
+                unitsPerPackage: '1'
+              }));
+            }}
+            placeholder="0"
+          />
+        </div>
+      )}
+
       <div className={cn("grid gap-4", showSalePrice ? "grid-cols-2" : "grid-cols-1")}>
         <div>
-          <Label htmlFor="purchasePrice">Precio Compra</Label>
+          <Label htmlFor="purchasePrice">Precio Compra (por paquete)</Label>
           <Input
             id="purchasePrice"
             type="number"
@@ -265,29 +494,16 @@ export default function Inventory() {
           </div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="quantity">Cantidad ({formData.unitBase})</Label>
-          <Input
-            id="quantity"
-            type="number"
-            step="0.01"
-            value={formData.quantity}
-            onChange={(e) => setFormData((prev) => ({ ...prev, quantity: e.target.value }))}
-            placeholder="0"
-          />
-        </div>
-        <div>
-          <Label htmlFor="minStock">Stock Mínimo ({formData.unitBase})</Label>
-          <Input
-            id="minStock"
-            type="number"
-            step="0.01"
-            value={formData.minStock}
-            onChange={(e) => setFormData((prev) => ({ ...prev, minStock: e.target.value }))}
-            placeholder="0"
-          />
-        </div>
+      <div>
+        <Label htmlFor="minStock">Stock Mínimo ({formData.unitBase})</Label>
+        <Input
+          id="minStock"
+          type="number"
+          step="0.01"
+          value={formData.minStock}
+          onChange={(e) => setFormData((prev) => ({ ...prev, minStock: e.target.value }))}
+          placeholder="0"
+        />
       </div>
     </div>
   );
@@ -304,7 +520,7 @@ export default function Inventory() {
 
   return (
     <Layout>
-      <PageHeader title="Inventario" description="Gestión de stock e insumos">
+      <PageHeader title="Inventario" description="Gestión de stock, insumos y semielaborados">
         <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
           Agregar al Inventario
@@ -348,6 +564,7 @@ export default function Inventory() {
           <TabsTrigger value="all">Todos</TabsTrigger>
           <TabsTrigger value="supplies">Insumos</TabsTrigger>
           <TabsTrigger value="drinks">Bebidas</TabsTrigger>
+          <TabsTrigger value="semi_elaborated">Semielaborados</TabsTrigger>
           <TabsTrigger value="others">Otros</TabsTrigger>
         </TabsList>
 
@@ -359,9 +576,9 @@ export default function Inventory() {
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden sm:table-cell">Categoría</TableHead>
                   <TableHead className="text-right">P. Compra</TableHead>
-                  <TableHead className="text-right">P. Venta</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">P. Venta</TableHead>
                   <TableHead className="text-right">Cantidad</TableHead>
-                  <TableHead className="text-center">Unidad</TableHead>
+                  <TableHead className="text-center hidden lg:table-cell">Paquetes</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -369,7 +586,7 @@ export default function Inventory() {
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       No hay productos
                     </TableCell>
@@ -382,22 +599,33 @@ export default function Inventory() {
                           {product.status === 'critical' && <AlertCircle className="w-4 h-4 text-destructive" />}
                           {product.status === 'low' && <AlertTriangle className="w-4 h-4 text-warning" />}
                           {product.name}
+                          {product.category === 'semi_elaborated' && (
+                            <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">Semi</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         {inventoryCategoryLabels[product.category as InventoryCategory] || product.category}
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(product.purchasePrice)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right hidden md:table-cell">
                         {product.category === 'supplies' ? (
                           <span className="text-muted-foreground">-</span>
                         ) : (
                           formatCurrency(product.salePrice)
                         )}
                       </TableCell>
-                      <TableCell className="text-right">{product.quantity}</TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-xs text-muted-foreground uppercase">{product.unitBase || 'unidad'}</span>
+                      <TableCell className="text-right">
+                        {product.quantity} <span className="text-xs text-muted-foreground">{product.unitBase}</span>
+                      </TableCell>
+                      <TableCell className="text-center hidden lg:table-cell">
+                        {product.packageCount > 0 ? (
+                          <span className="text-xs">
+                            {product.packageCount} × {product.unitsPerPackage}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
@@ -411,6 +639,11 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {product.category === 'semi_elaborated' && (
+                            <Button variant="ghost" size="icon" onClick={() => openRecipeDialog(product)} title="Receta">
+                              <BookOpen className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => openAdjustDialog(product)}>
                             <Settings2 className="w-4 h-4" />
                           </Button>
@@ -433,7 +666,7 @@ export default function Inventory() {
 
       {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Agregar al Inventario</DialogTitle>
           </DialogHeader>
@@ -450,7 +683,7 @@ export default function Inventory() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Producto</DialogTitle>
           </DialogHeader>
@@ -474,7 +707,7 @@ export default function Inventory() {
           <div className="space-y-4">
             <div>
               <Label>Cantidad Actual</Label>
-              <p className="text-lg font-semibold">{selectedProduct?.quantity}</p>
+              <p className="text-lg font-semibold">{selectedProduct?.quantity} {selectedProduct?.unitBase}</p>
             </div>
             <div>
               <Label htmlFor="newQuantity">Nueva Cantidad</Label>
@@ -517,6 +750,75 @@ export default function Inventory() {
             <Button onClick={handleAdjust} disabled={adjustStockMutation.isPending}>
               {adjustStockMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Ajustar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recipe Dialog for semi_elaborated */}
+      <Dialog open={isRecipeDialogOpen} onOpenChange={setIsRecipeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Receta: {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            <p className="text-sm text-muted-foreground">
+              Agrega los ingredientes (insumos u otros semielaborados) que se usan para preparar este producto.
+            </p>
+            {recipeIngredients.map((ingredient, index) => (
+              <div key={index} className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+                <Select
+                  value={ingredient.ingredient_id}
+                  onValueChange={(value) => updateRecipeRow(index, 'ingredient_id', value)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleccionar ingrediente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableIngredients
+                      .filter(ing => ing.id !== selectedProduct?.id)
+                      .map(ing => (
+                        <SelectItem key={ing.id} value={ing.id}>
+                          {ing.name} ({inventoryCategoryLabels[ing.category as InventoryCategory] || ing.category}) - {ing.unitBase || 'unidad'}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={ingredient.quantity}
+                  onChange={(e) => updateRecipeRow(index, 'quantity', e.target.value)}
+                  placeholder="Cant."
+                  className="w-24"
+                />
+                <Select
+                  value={ingredient.unit}
+                  onValueChange={(value) => updateRecipeRow(index, 'unit', value)}
+                >
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map(unit => (
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="sm" onClick={() => removeRecipeRow(index)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" onClick={addRecipeRow} className="w-full">
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Ingrediente
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRecipeDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveRecipe} disabled={savingRecipe}>
+              {savingRecipe ? 'Guardando...' : 'Guardar Receta'}
             </Button>
           </DialogFooter>
         </DialogContent>

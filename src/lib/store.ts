@@ -35,15 +35,15 @@ interface StoreState {
 
 // Initial sample data
 const initialProducts: Product[] = [
-  { id: '1', name: 'Cerveza Corona', category: 'drinks', purchasePrice: 15, salePrice: 35, quantity: 48, minStock: 24, status: 'normal', unitBase: 'ml', costPerUnit: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: '2', name: 'Whisky Jack Daniels', category: 'drinks', purchasePrice: 350, salePrice: 80, quantity: 750, minStock: 500, status: 'normal', unitBase: 'ml', costPerUnit: 0.47, createdAt: new Date(), updatedAt: new Date() },
-  { id: '3', name: 'Vodka Absolut', category: 'drinks', purchasePrice: 280, salePrice: 70, quantity: 500, minStock: 750, status: 'low', unitBase: 'ml', costPerUnit: 0.37, createdAt: new Date(), updatedAt: new Date() },
-  { id: '4', name: 'Limones', category: 'supplies', purchasePrice: 25, salePrice: 0, quantity: 2, minStock: 5, status: 'critical', unitBase: 'kg', costPerUnit: 25, createdAt: new Date(), updatedAt: new Date() },
-  { id: '5', name: 'Azúcar', category: 'supplies', purchasePrice: 30, salePrice: 0, quantity: 5, minStock: 3, status: 'normal', unitBase: 'kg', costPerUnit: 30, createdAt: new Date(), updatedAt: new Date() },
-  { id: '6', name: 'Hielo', category: 'supplies', purchasePrice: 35, salePrice: 0, quantity: 8, minStock: 10, status: 'low', unitBase: 'kg', costPerUnit: 35, createdAt: new Date(), updatedAt: new Date() },
-  { id: '7', name: 'Queso Cheddar', category: 'supplies', purchasePrice: 40, salePrice: 0, quantity: 2000, minStock: 1000, status: 'normal', unitBase: 'g', costPerUnit: 0.02, createdAt: new Date(), updatedAt: new Date() },
-  { id: '8', name: 'Pollo', category: 'supplies', purchasePrice: 60, salePrice: 0, quantity: 5, minStock: 3, status: 'normal', unitBase: 'kg', costPerUnit: 60, createdAt: new Date(), updatedAt: new Date() },
-  { id: '9', name: 'Papas', category: 'supplies', purchasePrice: 25, salePrice: 0, quantity: 3, minStock: 5, status: 'low', unitBase: 'kg', costPerUnit: 25, createdAt: new Date(), updatedAt: new Date() },
+  { id: '1', name: 'Cerveza Corona', category: 'drinks', purchasePrice: 15, salePrice: 35, quantity: 48, minStock: 24, status: 'normal', unitBase: 'ml', costPerUnit: null, unitsPerPackage: 1, packageCount: 48, createdAt: new Date(), updatedAt: new Date() },
+  { id: '2', name: 'Whisky Jack Daniels', category: 'drinks', purchasePrice: 350, salePrice: 80, quantity: 750, minStock: 500, status: 'normal', unitBase: 'ml', costPerUnit: 0.47, unitsPerPackage: 750, packageCount: 1, createdAt: new Date(), updatedAt: new Date() },
+  { id: '3', name: 'Vodka Absolut', category: 'drinks', purchasePrice: 280, salePrice: 70, quantity: 500, minStock: 750, status: 'low', unitBase: 'ml', costPerUnit: 0.37, unitsPerPackage: 750, packageCount: 1, createdAt: new Date(), updatedAt: new Date() },
+  { id: '4', name: 'Limones', category: 'supplies', purchasePrice: 25, salePrice: 0, quantity: 2, minStock: 5, status: 'critical', unitBase: 'kg', costPerUnit: 25, unitsPerPackage: 1, packageCount: 2, createdAt: new Date(), updatedAt: new Date() },
+  { id: '5', name: 'Azúcar', category: 'supplies', purchasePrice: 30, salePrice: 0, quantity: 5, minStock: 3, status: 'normal', unitBase: 'kg', costPerUnit: 30, unitsPerPackage: 1, packageCount: 5, createdAt: new Date(), updatedAt: new Date() },
+  { id: '6', name: 'Hielo', category: 'supplies', purchasePrice: 35, salePrice: 0, quantity: 8, minStock: 10, status: 'low', unitBase: 'kg', costPerUnit: 35, unitsPerPackage: 1, packageCount: 8, createdAt: new Date(), updatedAt: new Date() },
+  { id: '7', name: 'Queso Cheddar', category: 'supplies', purchasePrice: 40, salePrice: 0, quantity: 2000, minStock: 1000, status: 'normal', unitBase: 'g', costPerUnit: 0.02, unitsPerPackage: 1000, packageCount: 2, createdAt: new Date(), updatedAt: new Date() },
+  { id: '8', name: 'Pollo', category: 'supplies', purchasePrice: 60, salePrice: 0, quantity: 5, minStock: 3, status: 'normal', unitBase: 'kg', costPerUnit: 60, unitsPerPackage: 1, packageCount: 5, createdAt: new Date(), updatedAt: new Date() },
+  { id: '9', name: 'Papas', category: 'supplies', purchasePrice: 25, salePrice: 0, quantity: 3, minStock: 5, status: 'low', unitBase: 'kg', costPerUnit: 25, unitsPerPackage: 1, packageCount: 3, createdAt: new Date(), updatedAt: new Date() },
 ];
 
 const today = new Date();
