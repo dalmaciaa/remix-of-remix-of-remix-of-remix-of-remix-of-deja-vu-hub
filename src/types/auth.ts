@@ -24,15 +24,15 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
 }> = {
   admin: {
     label: 'Administrador',
-    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/staff', '/internal-consumption'],
+    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders'],
     defaultRoute: '/',
-    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'staff', 'internal-consumption']
+    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders']
   },
   mozo: {
     label: 'Mozo',
-    allowedRoutes: ['/sales', '/kitchen'],
-    defaultRoute: '/sales',
-    menuItems: ['sales', 'kitchen']
+    allowedRoutes: ['/sales', '/kitchen', '/bartender', '/my-orders'],
+    defaultRoute: '/my-orders',
+    menuItems: ['sales', 'kitchen', 'bartender', 'my-orders']
   },
   cocina: {
     label: 'Cocina',
@@ -42,9 +42,9 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
   },
   bartender: {
     label: 'Bartender',
-    allowedRoutes: ['/sales'],
-    defaultRoute: '/sales',
-    menuItems: ['sales']
+    allowedRoutes: ['/sales', '/bartender'],
+    defaultRoute: '/bartender',
+    menuItems: ['sales', 'bartender']
   }
 };
 

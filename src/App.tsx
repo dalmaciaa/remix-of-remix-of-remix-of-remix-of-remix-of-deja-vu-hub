@@ -12,6 +12,8 @@ import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
 import Events from "./pages/Events";
 import Kitchen from "./pages/Kitchen";
+import Bartender from "./pages/Bartender";
+import MyOrders from "./pages/MyOrders";
 import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
 import Login from "./pages/Login";
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
             <Route path="/kitchen" element={<ProtectedRoute><Kitchen /></ProtectedRoute>} />
+            <Route path="/bartender" element={<ProtectedRoute><Bartender /></ProtectedRoute>} />
+            <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
             <Route path="/internal-consumption" element={<ProtectedRoute><InternalConsumption /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

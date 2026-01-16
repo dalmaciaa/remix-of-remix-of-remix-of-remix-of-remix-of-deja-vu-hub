@@ -66,6 +66,7 @@ export function useSales() {
 
       return salesData.map((sale) => toSale(sale, itemsBySale[sale.id] || []));
     },
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time feel
   });
 }
 
@@ -157,8 +158,13 @@ export function useAddSale() {
 
       if (itemsError) throw itemsError;
 
-      // Check if any items require kitchen order
+      // Check if any items require kitchen order (food)
       const kitchenItems = saleItems.filter(item => item.requiresKitchen);
+      // Check if any items are cocktails (bartender orders)
+      const bartenderItems = saleItems.filter(item => {
+        const product = products.find(p => p.id === item.productId);
+        return product?.category === 'cocktails';
+      });
       
       if (kitchenItems.length > 0) {
         // Create kitchen order
@@ -199,6 +205,48 @@ export function useAddSale() {
             message: `Mesa ${tableNumber || 'S/N'}: ${kitchenItems.map(i => `${i.quantity}x ${i.productName}`).join(', ')}`,
             type: 'kitchen_order',
             related_id: kitchenOrder.id,
+          });
+      }
+
+      // Create bartender order for cocktails
+      if (bartenderItems.length > 0) {
+        const { data: bartenderOrder, error: boError } = await supabase
+          .from('bartender_orders')
+          .insert({
+            sale_id: sale.id,
+            staff_name: staffName || 'Sistema',
+            staff_id: staffId || null,
+            table_number: tableNumber || null,
+            notes: concept || null,
+            status: 'pendiente',
+          })
+          .select()
+          .single();
+
+        if (boError) throw boError;
+
+        // Create bartender order items
+        const { error: boiError } = await supabase
+          .from('bartender_order_items')
+          .insert(bartenderItems.map(item => ({
+            bartender_order_id: bartenderOrder.id,
+            product_id: item.productId,
+            product_name: item.productName,
+            quantity: item.quantity,
+            notes: item.notes || null,
+          })));
+
+        if (boiError) throw boiError;
+
+        // Create notification for bartender staff
+        await supabase
+          .from('staff_notifications')
+          .insert({
+            role_target: 'bartender',
+            title: 'Nuevo Pedido de Tragos',
+            message: `Mesa ${tableNumber || 'S/N'}: ${bartenderItems.map(i => `${i.quantity}x ${i.productName}`).join(', ')}`,
+            type: 'bartender_order',
+            related_id: bartenderOrder.id,
           });
       }
 

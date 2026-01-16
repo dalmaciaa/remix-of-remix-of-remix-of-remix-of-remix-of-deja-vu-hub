@@ -13,7 +13,8 @@ import {
   Users,
   UtensilsCrossed,
   Coffee,
-  Bell
+  Bell,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -34,12 +35,14 @@ interface NavItem {
 
 const allNavItems: NavItem[] = [
   { id: 'dashboard', path: '/', label: 'Panel', icon: LayoutDashboard },
+  { id: 'my-orders', path: '/my-orders', label: 'Mis Pedidos', icon: ClipboardList },
   { id: 'inventory', path: '/inventory', label: 'Inventario', icon: Package },
   { id: 'catalog', path: '/catalog', label: 'Catálogo de Venta', icon: UtensilsCrossed },
   { id: 'sales', path: '/sales', label: 'Ventas', icon: ShoppingCart },
   { id: 'expenses', path: '/expenses', label: 'Gastos', icon: Receipt },
   { id: 'events', path: '/events', label: 'Eventos', icon: PartyPopper },
   { id: 'kitchen', path: '/kitchen', label: 'Pedidos de Cocina', icon: ChefHat },
+  { id: 'bartender', path: '/bartender', label: 'Pedidos de Barra', icon: Wine },
   { id: 'staff', path: '/staff', label: 'Personal', icon: Users },
   { id: 'internal-consumption', path: '/internal-consumption', label: 'Consumo Interno', icon: Coffee },
 ];

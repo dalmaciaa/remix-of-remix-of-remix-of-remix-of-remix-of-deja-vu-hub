@@ -5,18 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { ChefHat, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Wine, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface KitchenOrderItem {
+interface BartenderOrderItem {
   id: string;
   product_name: string;
   quantity: number;
   notes: string | null;
 }
 
-interface KitchenOrder {
+interface BartenderOrder {
   id: string;
   sale_id: string | null;
   staff_id: string | null;
@@ -25,37 +25,35 @@ interface KitchenOrder {
   notes: string | null;
   status: 'pendiente' | 'en_preparacion' | 'listo' | 'entregado';
   created_at: string;
-  items: KitchenOrderItem[];
+  items: BartenderOrderItem[];
 }
 
-export default function Kitchen() {
-  const [orders, setOrders] = useState<KitchenOrder[]>([]);
+export default function Bartender() {
+  const [orders, setOrders] = useState<BartenderOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { roles, currentStaff } = useAuth();
   
   const isAdminRole = roles.includes('admin');
-  const isKitchenRole = roles.includes('cocina') || isAdminRole;
+  const isBartenderRole = roles.includes('bartender') || isAdminRole;
   const isMozoRole = roles.includes('mozo') || isAdminRole;
 
   const fetchOrders = async () => {
     try {
-      // Fetch orders that are not 'entregado'
       const { data: ordersData, error: ordersError } = await supabase
-        .from('kitchen_orders')
-        .select('id, sale_id, staff_id, staff_name, table_number, notes, status, created_at')
+        .from('bartender_orders')
+        .select('*')
         .in('status', ['pendiente', 'en_preparacion', 'listo'])
         .order('created_at', { ascending: true });
 
       if (ordersError) throw ordersError;
 
-      // Fetch items for each order
       const ordersWithItems = await Promise.all(
         (ordersData || []).map(async (order) => {
           const { data: items } = await supabase
-            .from('kitchen_order_items')
+            .from('bartender_order_items')
             .select('*')
-            .eq('kitchen_order_id', order.id);
+            .eq('bartender_order_id', order.id);
           
           return {
             ...order,
@@ -66,7 +64,7 @@ export default function Kitchen() {
 
       setOrders(ordersWithItems);
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('Error fetching bartender orders:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -82,10 +80,10 @@ export default function Kitchen() {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel('kitchen-orders')
+      .channel('bartender-orders')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'kitchen_orders' },
+        { event: '*', schema: 'public', table: 'bartender_orders' },
         () => {
           fetchOrders();
         }
@@ -97,10 +95,10 @@ export default function Kitchen() {
     };
   }, []);
 
-  const updateOrderStatus = async (orderId: string, newStatus: KitchenOrder['status']) => {
+  const updateOrderStatus = async (orderId: string, newStatus: BartenderOrder['status']) => {
     try {
       const { error } = await supabase
-        .from('kitchen_orders')
+        .from('bartender_orders')
         .update({ status: newStatus })
         .eq('id', orderId);
 
@@ -113,9 +111,9 @@ export default function Kitchen() {
           .from('staff_notifications')
           .insert({
             role_target: 'mozo',
-            title: '¡Pedido Listo!',
-            message: `Mesa ${order?.table_number || 'S/N'} está listo para entregar`,
-            type: 'order_ready',
+            title: '¡Tragos Listos!',
+            message: `Mesa ${order?.table_number || 'S/N'} - Tragos listos para entregar`,
+            type: 'bartender_order_ready',
             related_id: orderId,
           });
       }
@@ -136,14 +134,14 @@ export default function Kitchen() {
     }
   };
 
-  const canMarkAsDelivered = (order: KitchenOrder): boolean => {
+  const canMarkAsDelivered = (order: BartenderOrder): boolean => {
     // Solo el mozo que hizo el pedido puede marcarlo como entregado
     if (isAdminRole) return true;
     if (!isMozoRole) return false;
     return order.staff_id === currentStaff?.id;
   };
 
-  const getStatusBadge = (status: KitchenOrder['status']) => {
+  const getStatusBadge = (status: BartenderOrder['status']) => {
     switch (status) {
       case 'pendiente':
         return <Badge variant="destructive" className="text-lg px-4 py-1"><AlertCircle className="w-4 h-4 mr-1" /> Pendiente</Badge>;
@@ -178,16 +176,16 @@ export default function Kitchen() {
   return (
     <Layout>
       <PageHeader 
-        title="Pedidos de Cocina" 
-        description="Gestión de pedidos en tiempo real"
+        title="Pedidos de Barra" 
+        description="Gestión de tragos y cócteles en tiempo real"
       />
 
       {orders.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
-            <ChefHat className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <Wine className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">No hay pedidos pendientes</h3>
-            <p className="text-muted-foreground">Los nuevos pedidos aparecerán aquí automáticamente</p>
+            <p className="text-muted-foreground">Los nuevos pedidos de tragos aparecerán aquí automáticamente</p>
           </CardContent>
         </Card>
       ) : (
@@ -223,7 +221,7 @@ export default function Kitchen() {
                   {order.notes && (
                     <p className="text-sm bg-muted p-2 rounded mb-4">📝 {order.notes}</p>
                   )}
-                  {isKitchenRole && (
+                  {isBartenderRole && (
                     <Button 
                       className="w-full h-14 text-lg"
                       onClick={() => updateOrderStatus(order.id, 'en_preparacion')}
@@ -268,7 +266,7 @@ export default function Kitchen() {
                   {order.notes && (
                     <p className="text-sm bg-muted p-2 rounded mb-4">📝 {order.notes}</p>
                   )}
-                  {isKitchenRole && (
+                  {isBartenderRole && (
                     <Button 
                       className="w-full h-14 text-lg bg-green-600 hover:bg-green-700"
                       onClick={() => updateOrderStatus(order.id, 'listo')}
