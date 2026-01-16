@@ -40,6 +40,7 @@ export function useProducts() {
       if (error) throw error;
       return data.map(toProduct);
     },
+    refetchInterval: 10000, // Refetch every 10 seconds for stock alerts
   });
 }
 

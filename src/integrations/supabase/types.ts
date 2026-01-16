@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      bartender_order_items: {
+        Row: {
+          bartender_order_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          product_id: string | null
+          product_name: string
+          quantity: number
+        }
+        Insert: {
+          bartender_order_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name: string
+          quantity: number
+        }
+        Update: {
+          bartender_order_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bartender_order_items_bartender_order_id_fkey"
+            columns: ["bartender_order_id"]
+            isOneToOne: false
+            referencedRelation: "bartender_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bartender_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bartender_orders: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          sale_id: string | null
+          staff_id: string | null
+          staff_name: string
+          status: Database["public"]["Enums"]["kitchen_order_status"]
+          table_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sale_id?: string | null
+          staff_id?: string | null
+          staff_name: string
+          status?: Database["public"]["Enums"]["kitchen_order_status"]
+          table_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sale_id?: string | null
+          staff_id?: string | null
+          staff_name?: string
+          status?: Database["public"]["Enums"]["kitchen_order_status"]
+          table_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bartender_orders_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bartender_orders_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_complements: {
         Row: {
           created_at: string
