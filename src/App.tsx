@@ -16,6 +16,7 @@ import Bartender from "./pages/Bartender";
 import MyOrders from "./pages/MyOrders";
 import MyHistory from "./pages/MyHistory";
 import CashRegister from "./pages/CashRegister";
+import CashierCollect from "./pages/CashierCollect";
 import StaffHistory from "./pages/StaffHistory";
 import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
             <Route path="/my-history" element={<ProtectedRoute><MyHistory /></ProtectedRoute>} />
             <Route path="/cash-register" element={<ProtectedRoute><CashRegister /></ProtectedRoute>} />
+            <Route path="/cashier-collect" element={<ProtectedRoute><CashierCollect /></ProtectedRoute>} />
             <Route path="/staff-history" element={<ProtectedRoute><StaffHistory /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
             <Route path="/internal-consumption" element={<ProtectedRoute><InternalConsumption /></ProtectedRoute>} />

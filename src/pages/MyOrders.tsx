@@ -1,51 +1,35 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Clock, CheckCircle, AlertCircle, DollarSign, Package } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { ClipboardList, Clock, CheckCircle, Package, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, formatDateTime } from '@/lib/utils-format';
-import { useSales, SaleWithStatus, useUpdatePaymentStatus } from '@/hooks/useSales';
+import { useSales } from '@/hooks/useSales';
 import { useProducts } from '@/hooks/useProducts';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { PaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
 
-type TabType = 'pending' | 'history' | 'stock';
+type TabType = 'pending' | 'history' | 'stock' | 'stats';
 
 export default function MyOrders() {
-  const { toast } = useToast();
   const { currentStaff, roles } = useAuth();
   const { data: allSales = [] } = useSales();
   const { data: products = [] } = useProducts();
-  const updatePaymentMutation = useUpdatePaymentStatus();
   
   const [activeTab, setActiveTab] = useState<TabType>('pending');
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
 
-  const isAdminRole = roles.includes('admin');
-  const isMozoRole = roles.includes('mozo') || isAdminRole;
-
-  // Ventas del mozo actual
+  // Ventas del mozo actual solamente
   const mySales = useMemo(() => {
     if (!currentStaff) return [];
-    if (isAdminRole) return allSales;
     return allSales.filter(s => s.staffId === currentStaff.id);
-  }, [allSales, currentStaff, isAdminRole]);
+  }, [allSales, currentStaff]);
 
-  // Ventas no cobradas agrupadas por mesa
+  // Ventas no cobradas agrupadas por mesa (solo para ver, NO para cobrar)
   const unpaidByTable = useMemo(() => {
     const unpaid = mySales.filter(s => s.paymentStatus === 'no_cobrado');
-    const grouped: Record<string, SaleWithStatus[]> = {};
+    const grouped: Record<string, typeof unpaid> = {};
     
     unpaid.forEach(sale => {
       const table = sale.tableNumber || 'sin_mesa';
@@ -70,44 +54,6 @@ export default function MyOrders() {
     return products.filter(p => p.status === 'low' || p.status === 'critical');
   }, [products]);
 
-  const openPaymentDialog = (table: string) => {
-    setSelectedTable(table);
-    setSelectedPaymentMethod('cash');
-    setIsPaymentDialogOpen(true);
-  };
-
-  const handlePayTable = async () => {
-    if (!selectedTable) return;
-    
-    const tableSales = unpaidByTable[selectedTable] || [];
-    
-    try {
-      // Marcar todas las ventas de la mesa como cobradas
-      for (const sale of tableSales) {
-        await updatePaymentMutation.mutateAsync({
-          saleId: sale.id,
-          paymentStatus: 'cobrado',
-          paymentMethod: selectedPaymentMethod,
-        });
-      }
-      
-      toast({
-        title: 'Mesa cobrada',
-        description: `Se cobraron ${tableSales.length} pedidos por ${formatCurrency(tableTotals[selectedTable])}`
-      });
-      
-      setIsPaymentDialogOpen(false);
-      setSelectedTable(null);
-    } catch (error) {
-      console.error('Error paying table:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo procesar el cobro'
-      });
-    }
-  };
-
   // Historial de hoy
   const todayHistory = useMemo(() => {
     const today = new Date();
@@ -117,6 +63,40 @@ export default function MyOrders() {
       const saleDate = new Date(s.createdAt);
       return saleDate >= today;
     }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [mySales]);
+
+  // Estadísticas del mozo
+  const stats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    
+    const todaySales = mySales.filter(s => new Date(s.createdAt) >= today);
+    const weekSales = mySales.filter(s => new Date(s.createdAt) >= weekAgo);
+    const monthSales = mySales.filter(s => new Date(s.createdAt) >= monthAgo);
+    
+    const todayTotal = todaySales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const weekTotal = weekSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const monthTotal = monthSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    
+    const todayPaid = todaySales.filter(s => s.paymentStatus === 'cobrado').reduce((sum, s) => sum + s.totalAmount, 0);
+    const todayPending = todaySales.filter(s => s.paymentStatus === 'no_cobrado').reduce((sum, s) => sum + s.totalAmount, 0);
+    
+    // Promedio diario del mes
+    const daysInPeriod = Math.max(1, Math.ceil((new Date().getTime() - monthAgo.getTime()) / (1000 * 60 * 60 * 24)));
+    const dailyAverage = monthTotal / daysInPeriod;
+    
+    return {
+      today: { count: todaySales.length, total: todayTotal, paid: todayPaid, pending: todayPending },
+      week: { count: weekSales.length, total: weekTotal },
+      month: { count: monthSales.length, total: monthTotal },
+      dailyAverage,
+    };
   }, [mySales]);
 
   return (
@@ -137,19 +117,30 @@ export default function MyOrders() {
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <ClipboardList className="w-4 h-4" />
-            Historial de Hoy
+            Hoy
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Mi Desempeño
           </TabsTrigger>
           <TabsTrigger value="stock" className="gap-2">
             <Package className="w-4 h-4" />
-            Stock Bajo
+            Stock
             {lowStockProducts.length > 0 && (
               <Badge variant="destructive" className="ml-1">{lowStockProducts.length}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        {/* Pending Orders by Table */}
+        {/* Pending Orders by Table - SOLO VISUALIZACIÓN, NO COBRO */}
         <TabsContent value="pending">
+          <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Los pedidos pendientes serán cobrados por la cajera. Aquí puedes ver el estado de tus mesas.
+            </p>
+          </div>
+          
           {Object.keys(unpaidByTable).length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
@@ -192,19 +183,15 @@ export default function MyOrders() {
                     </div>
                     
                     <div className="border-t pt-4 mt-4">
-                      <div className="flex justify-between items-center mb-4">
+                      <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold">Total Mesa</span>
                         <span className="text-2xl font-bold text-primary">
                           {formatCurrency(tableTotals[table])}
                         </span>
                       </div>
-                      <Button 
-                        className="w-full h-12 text-lg"
-                        onClick={() => openPaymentDialog(table)}
-                      >
-                        <DollarSign className="w-5 h-5 mr-2" />
-                        Cobrar Todo
-                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Pendiente de cobro por cajera
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -262,6 +249,97 @@ export default function MyOrders() {
           )}
         </TabsContent>
 
+        {/* Stats */}
+        <TabsContent value="stats">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="w-10 h-10 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ventas Hoy</p>
+                    <p className="text-3xl font-bold">{stats.today.count}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-10 h-10 text-green-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Hoy</p>
+                    <p className="text-3xl font-bold">{formatCurrency(stats.today.total)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 border-amber-500/30">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-10 h-10 text-amber-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pendiente</p>
+                    <p className="text-3xl font-bold">{formatCurrency(stats.today.pending)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-10 h-10 text-purple-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Promedio/Día</p>
+                    <p className="text-3xl font-bold">{formatCurrency(stats.dailyAverage)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Última Semana</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-4xl font-bold">{stats.week.count}</p>
+                    <p className="text-sm text-muted-foreground">Ventas realizadas</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-primary">{formatCurrency(stats.week.total)}</p>
+                    <p className="text-sm text-muted-foreground">Total facturado</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Último Mes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-4xl font-bold">{stats.month.count}</p>
+                    <p className="text-sm text-muted-foreground">Ventas realizadas</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-primary">{formatCurrency(stats.month.total)}</p>
+                    <p className="text-sm text-muted-foreground">Total facturado</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
         {/* Stock Alerts */}
         <TabsContent value="stock">
           {lowStockProducts.length === 0 ? (
@@ -301,48 +379,6 @@ export default function MyOrders() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              Cobrar {selectedTable === 'sin_mesa' ? 'Pedidos sin Mesa' : `Mesa ${selectedTable}`}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-center p-4 bg-secondary/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total a cobrar</p>
-              <p className="text-3xl font-bold text-primary">
-                {selectedTable && formatCurrency(tableTotals[selectedTable] || 0)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedTable && `${unpaidByTable[selectedTable]?.length || 0} pedidos`}
-              </p>
-            </div>
-            <div>
-              <Label>Método de Pago</Label>
-              <Select value={selectedPaymentMethod} onValueChange={(v) => setSelectedPaymentMethod(v as PaymentMethod)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Efectivo</SelectItem>
-                  <SelectItem value="transfer">Transferencia</SelectItem>
-                  <SelectItem value="qr">QR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handlePayTable} disabled={updatePaymentMutation.isPending}>
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Confirmar Cobro
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }

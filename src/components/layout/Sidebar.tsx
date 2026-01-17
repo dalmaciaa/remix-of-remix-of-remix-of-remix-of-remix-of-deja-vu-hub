@@ -16,7 +16,8 @@ import {
   Bell,
   ClipboardList,
   History,
-  Banknote
+  Banknote,
+  DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -40,6 +41,7 @@ const allNavItems: NavItem[] = [
   { id: 'my-orders', path: '/my-orders', label: 'Mis Pedidos', icon: ClipboardList },
   { id: 'my-history', path: '/my-history', label: 'Mi Historial', icon: History },
   { id: 'cash-register', path: '/cash-register', label: 'Caja', icon: Banknote },
+  { id: 'cashier-collect', path: '/cashier-collect', label: 'Cobrar', icon: DollarSign },
   { id: 'staff-history', path: '/staff-history', label: 'Historial Personal', icon: Users },
   { id: 'inventory', path: '/inventory', label: 'Inventario', icon: Package },
   { id: 'catalog', path: '/catalog', label: 'Catálogo de Venta', icon: UtensilsCrossed },
