@@ -21,29 +21,44 @@ const AUTH_KEY = 'dejavu_verified_auth';
 const STAFF_KEY = 'dejavu_current_staff';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem(AUTH_KEY) === 'true';
-  });
-  const [currentStaff, setCurrentStaff] = useState<StaffWithRoles | null>(() => {
-    const saved = localStorage.getItem(STAFF_KEY);
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [roles, setRoles] = useState<AppRole[]>(() => {
-    const saved = localStorage.getItem(STAFF_KEY);
-    return saved ? JSON.parse(saved).roles || [] : [];
-  });
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentStaff, setCurrentStaff] = useState<StaffWithRoles | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [pendingStaffId, setPendingStaffId] = useState<string | null>(null);
 
+  // Initialize auth state from localStorage
   useEffect(() => {
+    const savedAuth = localStorage.getItem(AUTH_KEY) === 'true';
+    const savedStaff = localStorage.getItem(STAFF_KEY);
+    
+    if (savedAuth && savedStaff) {
+      try {
+        const parsed = JSON.parse(savedStaff);
+        setCurrentStaff(parsed);
+        setRoles(parsed.roles || []);
+        setIsAuthenticated(true);
+      } catch (e) {
+        // Invalid data, clear it
+        localStorage.removeItem(AUTH_KEY);
+        localStorage.removeItem(STAFF_KEY);
+      }
+    }
+    setIsInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    
     localStorage.setItem(AUTH_KEY, String(isAuthenticated));
     if (currentStaff) {
       localStorage.setItem(STAFF_KEY, JSON.stringify(currentStaff));
     } else {
       localStorage.removeItem(STAFF_KEY);
     }
-  }, [isAuthenticated, currentStaff]);
+  }, [isAuthenticated, currentStaff, isInitialized]);
 
   const requestLogin = async (username: string, password: string): Promise<{ error: string | null; staffId?: string }> => {
     try {
@@ -156,6 +171,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getUserDefaultRoute = (): string => {
     return getDefaultRoute(roles);
   };
+
+  // Show loading while initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider 
