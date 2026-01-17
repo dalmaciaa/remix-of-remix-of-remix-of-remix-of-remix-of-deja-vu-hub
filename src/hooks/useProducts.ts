@@ -70,10 +70,30 @@ export function useAddProduct() {
         .single();
 
       if (error) throw error;
+
+      // Si tiene precio de compra, registrar como gasto (saldo negativo)
+      // Solo para productos que no son semielaborados
+      if (product.purchasePrice > 0 && product.category !== 'semi_elaborated') {
+        const { error: expenseError } = await supabase
+          .from('expenses')
+          .insert({
+            amount: product.purchasePrice,
+            category: product.category === 'drinks' ? 'drinks' : 'suppliers',
+            description: `Compra: ${product.name}`,
+            payment_method: 'cash',
+          });
+
+        if (expenseError) {
+          console.error('Error registering purchase expense:', expenseError);
+          // No lanzamos error aquí para no bloquear la creación del producto
+        }
+      }
+
       return toProduct(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast.success('Producto agregado');
     },
     onError: (error) => {

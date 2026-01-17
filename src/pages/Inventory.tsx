@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, useAdjustStock } from '@/hooks/useProducts';
 import { Product, InventoryCategory, StockAdjustment, UnitType } from '@/types';
 import { formatCurrency, inventoryCategoryLabels, stockStatusLabels, adjustmentReasonLabels, unitLabels } from '@/lib/utils-format';
-import { Plus, Pencil, Trash2, AlertTriangle, AlertCircle, Package, Search, Settings2, Loader2, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, AlertCircle, Package, Search, Settings2, Loader2, BookOpen, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -334,6 +334,125 @@ export default function Inventory() {
     }
   };
 
+  // State for producing semi-elaborated products
+  const [isProduceDialogOpen, setIsProduceDialogOpen] = useState(false);
+  const [produceQuantity, setProduceQuantity] = useState('1');
+  const [producing, setProducing] = useState(false);
+
+  const openProduceDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setProduceQuantity('1');
+    setIsProduceDialogOpen(true);
+  };
+
+  const handleProduce = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      setProducing(true);
+      const quantityToProduce = Number(produceQuantity);
+
+      if (quantityToProduce <= 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'La cantidad debe ser mayor a 0'
+        });
+        return;
+      }
+
+      // Fetch recipe for this product
+      const { data: recipeItems, error: recipeError } = await supabase
+        .from('recipes')
+        .select('ingredient_id, quantity')
+        .eq('product_id', selectedProduct.id);
+
+      if (recipeError) throw recipeError;
+
+      if (!recipeItems || recipeItems.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Sin receta',
+          description: 'Este producto no tiene receta configurada'
+        });
+        return;
+      }
+
+      // Get current ingredient quantities
+      const ingredientIds = recipeItems.map(r => r.ingredient_id);
+      const { data: ingredients, error: ingError } = await supabase
+        .from('products')
+        .select('id, name, quantity, min_stock')
+        .in('id', ingredientIds);
+
+      if (ingError) throw ingError;
+
+      // Check if we have enough of each ingredient
+      const shortages: string[] = [];
+      for (const recipeItem of recipeItems) {
+        const ingredient = ingredients?.find(i => i.id === recipeItem.ingredient_id);
+        if (!ingredient) continue;
+
+        const requiredQuantity = Number(recipeItem.quantity) * quantityToProduce;
+        const availableQuantity = Number(ingredient.quantity);
+
+        if (availableQuantity < requiredQuantity) {
+          shortages.push(`${ingredient.name}: necesario ${requiredQuantity}, disponible ${availableQuantity}`);
+        }
+      }
+
+      if (shortages.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Stock insuficiente',
+          description: shortages.join('; ')
+        });
+        return;
+      }
+
+      // Deduct ingredients
+      for (const recipeItem of recipeItems) {
+        const ingredient = ingredients?.find(i => i.id === recipeItem.ingredient_id);
+        if (!ingredient) continue;
+
+        const quantityToDeduct = Number(recipeItem.quantity) * quantityToProduce;
+        const newQuantity = Number(ingredient.quantity) - quantityToDeduct;
+        const newStatus = newQuantity <= 0 ? 'critical' : newQuantity <= ingredient.min_stock ? 'low' : 'normal';
+
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity, status: newStatus })
+          .eq('id', recipeItem.ingredient_id);
+      }
+
+      // Increase semi-elaborated product quantity
+      const newProductQuantity = Number(selectedProduct.quantity) + quantityToProduce;
+      const newProductStatus = newProductQuantity <= 0 ? 'critical' : newProductQuantity <= selectedProduct.minStock ? 'low' : 'normal';
+
+      await supabase
+        .from('products')
+        .update({ quantity: newProductQuantity, status: newProductStatus })
+        .eq('id', selectedProduct.id);
+
+      toast({
+        title: 'Producción completada',
+        description: `Se fabricaron ${quantityToProduce} unidades de ${selectedProduct.name}`
+      });
+
+      setIsProduceDialogOpen(false);
+      refetch();
+    } catch (error: any) {
+      console.error('Error producing:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'No se pudo fabricar el producto'
+      });
+    } finally {
+      setProducing(false);
+    }
+  };
+
   const addRecipeRow = () => {
     setRecipeIngredients([...recipeIngredients, { ingredient_id: '', quantity: '', unit: 'unidad' }]);
   };
@@ -364,7 +483,8 @@ export default function Inventory() {
   const showPurchasePrice = formData.category !== 'semi_elaborated';
   
   // Mostrar separación de paquetes para insumos y bebidas (no para semielaborados)
-  const showPackageSeparation = formData.category === 'supplies' || formData.category === 'drinks';
+  // Mostrar separación de paquetes para insumos, bebidas y otros (no para semielaborados)
+  const showPackageSeparation = formData.category === 'supplies' || formData.category === 'drinks' || formData.category === 'others';
   
   // Los semielaborados se manejan en unidades simples
   const isSemiElaborated = formData.category === 'semi_elaborated';
@@ -430,7 +550,7 @@ export default function Inventory() {
           <p className="text-sm font-medium">Gestión de paquetes</p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="unitsPerPackage">Unidades por paquete</Label>
+              <Label htmlFor="unitsPerPackage">{formData.unitBase === 'unidad' ? 'Unidades por paquete' : `${unitLabels[formData.unitBase] || formData.unitBase} por paquete`}</Label>
               <Input
                 id="unitsPerPackage"
                 type="number"
@@ -440,7 +560,13 @@ export default function Inventory() {
                 placeholder="1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Ej: una botella de 750ml = 750 unidades
+                {formData.unitBase === 'unidad' 
+                  ? 'Ej: un paquete de 12 unidades = 12' 
+                  : formData.unitBase === 'ml' 
+                    ? 'Ej: una botella de 750ml = 750' 
+                    : formData.unitBase === 'g'
+                      ? 'Ej: un paquete de 1000g = 1000'
+                      : `Cantidad en ${formData.unitBase} por paquete`}
               </p>
             </div>
             <div>
@@ -455,8 +581,8 @@ export default function Inventory() {
               />
             </div>
           </div>
-          <p className="text-sm text-primary">
-            Total: {calculateTotalQuantity()} {formData.unitBase}
+          <p className="text-sm text-primary font-medium">
+            Stock Total: {calculateTotalQuantity()} {unitLabels[formData.unitBase] || formData.unitBase}
           </p>
         </div>
       )}
@@ -486,7 +612,7 @@ export default function Inventory() {
       {showPurchasePrice && (
         <div className={cn("grid gap-4", showSalePrice ? "grid-cols-2" : "grid-cols-1")}>
           <div>
-            <Label htmlFor="purchasePrice">Precio Compra (por paquete)</Label>
+            <Label htmlFor="purchasePrice">Precio Compra (total)</Label>
             <Input
               id="purchasePrice"
               type="number"
@@ -494,6 +620,9 @@ export default function Inventory() {
               onChange={(e) => setFormData((prev) => ({ ...prev, purchasePrice: e.target.value }))}
               placeholder="0"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Se registrará como gasto (saldo negativo)
+            </p>
           </div>
           {showSalePrice && (
             <div>
@@ -515,7 +644,7 @@ export default function Inventory() {
         <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
           <p className="text-sm text-blue-500 font-medium">💡 Producto Semielaborado</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Los semielaborados no tienen precio de compra ni venta. Se cuentan en unidades y sirven como ingredientes para productos del catálogo de venta.
+            Los semielaborados no tienen precio de compra ni venta. Después de crear el producto, define su receta y usa el botón <strong>Fabricar</strong> para producir unidades descontando los ingredientes automáticamente.
           </p>
         </div>
       )}
@@ -665,9 +794,14 @@ export default function Inventory() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {product.category === 'semi_elaborated' && (
-                            <Button variant="ghost" size="icon" onClick={() => openRecipeDialog(product)} title="Receta">
-                              <BookOpen className="w-4 h-4" />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => openProduceDialog(product)} title="Fabricar">
+                                <Factory className="w-4 h-4 text-primary" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => openRecipeDialog(product)} title="Receta">
+                                <BookOpen className="w-4 h-4" />
+                              </Button>
+                            </>
                           )}
                           <Button variant="ghost" size="icon" onClick={() => openAdjustDialog(product)}>
                             <Settings2 className="w-4 h-4" />
@@ -844,6 +978,43 @@ export default function Inventory() {
             <Button variant="outline" onClick={() => setIsRecipeDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveRecipe} disabled={savingRecipe}>
               {savingRecipe ? 'Guardando...' : 'Guardar Receta'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Produce Semi-Elaborated Dialog */}
+      <Dialog open={isProduceDialogOpen} onOpenChange={setIsProduceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fabricar: {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-secondary/30 rounded-lg">
+              <p className="text-sm text-muted-foreground">Stock actual</p>
+              <p className="text-lg font-semibold">{selectedProduct?.quantity} {selectedProduct?.unitBase}</p>
+            </div>
+            <div>
+              <Label htmlFor="produceQuantity">Cantidad a fabricar</Label>
+              <Input
+                id="produceQuantity"
+                type="number"
+                min="1"
+                step="1"
+                value={produceQuantity}
+                onChange={(e) => setProduceQuantity(e.target.value)}
+                placeholder="1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Se descontarán los ingredientes de la receta automáticamente
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProduceDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleProduce} disabled={producing}>
+              {producing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Factory className="w-4 h-4 mr-2" />}
+              Fabricar
             </Button>
           </DialogFooter>
         </DialogContent>
