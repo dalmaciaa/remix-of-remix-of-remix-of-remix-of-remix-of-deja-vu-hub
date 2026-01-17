@@ -99,16 +99,72 @@ export function useAddSale() {
 
       if (prodError) throw prodError;
 
-      // Check stock availability only for drinks (food and cocktails are made on demand)
+      // Check stock availability for drinks directly
       for (const item of items) {
         const product = products.find(p => p.id === item.productId);
         if (!product) {
           throw new Error(`Producto no encontrado`);
         }
-        // Solo validar stock para bebidas
-        if (product.category === 'drinks' && product.quantity < item.quantity) {
+        // Solo validar stock para bebidas directas (no compuestas)
+        if (product.category === 'drinks' && !product.is_compound && product.quantity < item.quantity) {
           throw new Error(`Stock insuficiente para ${product.name}`);
         }
+      }
+
+      // Check ingredient stock for compound products (food, cocktails, compound drinks)
+      const ingredientShortages: string[] = [];
+      
+      for (const item of items) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product || !product.is_compound) continue;
+
+        // Get recipe for this product
+        const { data: recipeItems, error: recipeError } = await supabase
+          .from('recipes')
+          .select('ingredient_id, quantity')
+          .eq('product_id', item.productId);
+
+        if (recipeError) {
+          console.error('Error fetching recipe:', recipeError);
+          continue;
+        }
+
+        if (!recipeItems || recipeItems.length === 0) {
+          // No recipe configured, skip validation
+          continue;
+        }
+
+        // Get current ingredient quantities
+        const ingredientIds = recipeItems.map(r => r.ingredient_id);
+        const { data: ingredients, error: ingError } = await supabase
+          .from('products')
+          .select('id, name, quantity')
+          .in('id', ingredientIds);
+
+        if (ingError) {
+          console.error('Error fetching ingredients:', ingError);
+          continue;
+        }
+
+        // Check if we have enough of each ingredient
+        for (const recipeItem of recipeItems) {
+          const ingredient = ingredients?.find(i => i.id === recipeItem.ingredient_id);
+          if (!ingredient) continue;
+
+          const requiredQuantity = Number(recipeItem.quantity) * item.quantity;
+          const availableQuantity = Number(ingredient.quantity);
+
+          if (availableQuantity < requiredQuantity) {
+            ingredientShortages.push(
+              `${ingredient.name} (necesario: ${requiredQuantity}, disponible: ${availableQuantity})`
+            );
+          }
+        }
+      }
+
+      // If there are ingredient shortages, throw error with details
+      if (ingredientShortages.length > 0) {
+        throw new Error(`Stock insuficiente de ingredientes:\n${ingredientShortages.join('\n')}`);
       }
 
       // Calculate sale items and total
