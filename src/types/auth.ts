@@ -24,9 +24,10 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
 }> = {
   admin: {
     label: 'Administrador',
-    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders', '/my-history', '/cash-register'],
+    // Admin tiene acceso ABSOLUTO a todo
+    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders', '/my-history', '/cash-register', '/staff-history', '/cashier-collect'],
     defaultRoute: '/',
-    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders', 'my-history', 'cash-register']
+    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders', 'my-history', 'cash-register', 'staff-history', 'cashier-collect']
   },
   mozo: {
     label: 'Mozo',
@@ -42,15 +43,15 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
   },
   bartender: {
     label: 'Bartender',
-    allowedRoutes: ['/sales', '/bartender'],
+    allowedRoutes: ['/bartender'],
     defaultRoute: '/bartender',
-    menuItems: ['sales', 'bartender']
+    menuItems: ['bartender']
   },
   cajero: {
     label: 'Cajero',
-    allowedRoutes: ['/cash-register', '/sales', '/expenses', '/staff-history'],
+    allowedRoutes: ['/cash-register', '/sales', '/expenses', '/staff-history', '/cashier-collect'],
     defaultRoute: '/cash-register',
-    menuItems: ['cash-register', 'sales', 'expenses', 'staff-history']
+    menuItems: ['cash-register', 'sales', 'expenses', 'staff-history', 'cashier-collect']
   }
 };
 
