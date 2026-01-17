@@ -8,18 +8,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useSales, SaleWithStatus, useUpdatePaymentStatus } from '@/hooks/useSales';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatCurrency, formatDateTime } from '@/lib/utils-format';
-import { DollarSign, User, CheckCircle, Clock, Users } from 'lucide-react';
+import { formatCurrency, formatDateTime, paymentMethodLabels, isToday, isThisMonth } from '@/lib/utils-format';
+import { DollarSign, User, CheckCircle, Clock, Users, Receipt } from 'lucide-react';
 import { PaymentMethod } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface StaffMember {
   id: string;
   full_name: string;
+  username: string;
 }
+
+type ViewFilter = 'today' | 'month' | 'all';
 
 export default function CashierCollect() {
   const { toast } = useToast();
@@ -32,12 +36,14 @@ export default function CashierCollect() {
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedStaffForPayment, setSelectedStaffForPayment] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
+  const [activeTab, setActiveTab] = useState<'pending' | 'paid'>('pending');
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('today');
 
   useEffect(() => {
     const fetchStaff = async () => {
       const { data } = await supabase
         .from('staff')
-        .select('id, full_name')
+        .select('id, full_name, username')
         .eq('is_active', true)
         .order('full_name');
       
@@ -55,13 +61,28 @@ export default function CashierCollect() {
     return sales;
   }, [allSales, selectedStaff]);
 
+  // Ventas cobradas filtradas por tiempo
+  const paidSales = useMemo(() => {
+    let sales = allSales.filter(s => s.paymentStatus === 'cobrado');
+    
+    if (viewFilter === 'today') {
+      sales = sales.filter(s => isToday(new Date(s.createdAt)));
+    } else if (viewFilter === 'month') {
+      sales = sales.filter(s => isThisMonth(new Date(s.createdAt)));
+    }
+    
+    if (selectedStaff !== 'all') {
+      sales = sales.filter(s => s.staffId === selectedStaff);
+    }
+    return sales;
+  }, [allSales, selectedStaff, viewFilter]);
+
   // Agrupar por mozo y luego por mesa
   const groupedByStaffAndTable = useMemo(() => {
     const grouped: Record<string, Record<string, SaleWithStatus[]>> = {};
     
     unpaidSales.forEach(sale => {
       const staffId = sale.staffId || 'sin_mozo';
-      const staffName = sale.staffName || 'Sin Mozo';
       const table = sale.tableNumber || 'sin_mesa';
       
       if (!grouped[staffId]) {
@@ -76,12 +97,13 @@ export default function CashierCollect() {
     return grouped;
   }, [unpaidSales]);
 
-  // Get staff name by ID
-  const getStaffName = (staffId: string) => {
-    if (staffId === 'sin_mozo') return 'Sin Mozo';
-    return staffList.find(s => s.id === staffId)?.full_name || 
-           unpaidSales.find(s => s.staffId === staffId)?.staffName || 
-           'Desconocido';
+  // Get staff info by ID
+  const getStaffInfo = (staffId: string) => {
+    if (staffId === 'sin_mozo') return { name: 'Sin Mozo', username: '-' };
+    const staff = staffList.find(s => s.id === staffId);
+    if (staff) return { name: staff.full_name, username: staff.username };
+    const sale = unpaidSales.find(s => s.staffId === staffId);
+    return { name: sale?.staffName || 'Desconocido', username: '-' };
   };
 
   // Calculate total for a table
@@ -133,17 +155,18 @@ export default function CashierCollect() {
   // Stats
   const stats = useMemo(() => {
     const totalPending = unpaidSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalPaid = paidSales.reduce((sum, s) => sum + s.totalAmount, 0);
     const tablesCount = new Set(unpaidSales.map(s => s.tableNumber || 'sin_mesa')).size;
     const staffCount = new Set(unpaidSales.map(s => s.staffId || 'sin_mozo')).size;
     
-    return { totalPending, tablesCount, staffCount, salesCount: unpaidSales.length };
-  }, [unpaidSales]);
+    return { totalPending, totalPaid, tablesCount, staffCount, salesCount: unpaidSales.length, paidCount: paidSales.length };
+  }, [unpaidSales, paidSales]);
 
   return (
     <Layout>
       <PageHeader 
         title="Cobrar Pedidos" 
-        description="Gestiona los cobros de pedidos pendientes por mozo y mesa"
+        description="Gestiona los cobros de pedidos pendientes y visualiza las ventas cobradas"
       />
 
       {/* Stats */}
@@ -153,20 +176,20 @@ export default function CashierCollect() {
             <div className="flex items-center gap-3">
               <DollarSign className="w-8 h-8 text-amber-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Total Pendiente</p>
+                <p className="text-sm text-muted-foreground">Pendiente</p>
                 <p className="text-2xl font-bold text-amber-500">{formatCurrency(stats.totalPending)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-green-500/10 border-green-500/30">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Clock className="w-8 h-8 text-primary" />
+              <CheckCircle className="w-8 h-8 text-green-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Pedidos</p>
-                <p className="text-2xl font-bold">{stats.salesCount}</p>
+                <p className="text-sm text-muted-foreground">Cobrado ({viewFilter === 'today' ? 'Hoy' : viewFilter === 'month' ? 'Mes' : 'Total'})</p>
+                <p className="text-2xl font-bold text-green-500">{formatCurrency(stats.totalPaid)}</p>
               </div>
             </div>
           </CardContent>
@@ -177,7 +200,7 @@ export default function CashierCollect() {
             <div className="flex items-center gap-3">
               <Users className="w-8 h-8 text-blue-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Mozos</p>
+                <p className="text-sm text-muted-foreground">Mozos con pendientes</p>
                 <p className="text-2xl font-bold">{stats.staffCount}</p>
               </div>
             </div>
@@ -187,10 +210,10 @@ export default function CashierCollect() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <User className="w-8 h-8 text-green-500" />
+              <Clock className="w-8 h-8 text-primary" />
               <div>
-                <p className="text-sm text-muted-foreground">Mesas</p>
-                <p className="text-2xl font-bold">{stats.tablesCount}</p>
+                <p className="text-sm text-muted-foreground">Pedidos pendientes</p>
+                <p className="text-2xl font-bold">{stats.salesCount}</p>
               </div>
             </div>
           </CardContent>
@@ -198,7 +221,7 @@ export default function CashierCollect() {
       </div>
 
       {/* Filter by staff */}
-      <div className="mb-6">
+      <div className="flex gap-4 mb-6">
         <Select value={selectedStaff} onValueChange={setSelectedStaff}>
           <SelectTrigger className="w-64">
             <SelectValue placeholder="Filtrar por mozo" />
@@ -207,83 +230,194 @@ export default function CashierCollect() {
             <SelectItem value="all">Todos los mozos</SelectItem>
             {staffList.map(staff => (
               <SelectItem key={staff.id} value={staff.id}>
-                {staff.full_name}
+                {staff.full_name} (@{staff.username})
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Orders grouped by staff and table */}
-      {Object.keys(groupedByStaffAndTable).length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
-            <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Todo cobrado</h3>
-            <p className="text-muted-foreground">No hay pedidos pendientes de cobro</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedByStaffAndTable).map(([staffId, tables]) => (
-            <Card key={staffId}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-primary" />
-                  <CardTitle>{getStaffName(staffId)}</CardTitle>
-                  <Badge variant="secondary">
-                    {Object.values(tables).flat().length} pedidos
-                  </Badge>
-                </div>
-              </CardHeader>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'pending' | 'paid')}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="pending" className="gap-2">
+            <Clock className="w-4 h-4" />
+            Pendientes ({stats.salesCount})
+          </TabsTrigger>
+          <TabsTrigger value="paid" className="gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Cobradas ({stats.paidCount})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending">
+          {/* Orders grouped by staff and table */}
+          {Object.keys(groupedByStaffAndTable).length === 0 ? (
+            <Card className="text-center py-12">
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(tables).map(([table, sales]) => (
-                    <Card key={table} className="border-amber-500/50 border">
-                      <CardContent className="pt-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <h4 className="font-semibold text-lg">
-                            {table === 'sin_mesa' ? 'Sin Mesa' : `Mesa ${table}`}
-                          </h4>
-                          <Badge className="bg-amber-500">
-                            {sales.length}
-                          </Badge>
-                        </div>
-                        
-                        <div className="space-y-2 max-h-32 overflow-y-auto mb-4">
-                          {sales.map(sale => (
-                            <div key={sale.id} className="text-sm p-2 bg-secondary/30 rounded">
-                              <div className="flex justify-between">
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(sale.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                                <span className="font-medium">{formatCurrency(sale.totalAmount)}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {sale.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <div className="flex justify-between items-center pt-3 border-t">
-                          <span className="font-bold text-lg text-primary">
-                            {formatCurrency(getTableTotal(sales))}
-                          </span>
-                          <Button size="sm" onClick={() => openPaymentDialog(staffId, table)}>
-                            <DollarSign className="w-4 h-4 mr-1" />
-                            Cobrar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Todo cobrado</h3>
+                <p className="text-muted-foreground">No hay pedidos pendientes de cobro</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="space-y-6">
+              {Object.entries(groupedByStaffAndTable).map(([staffId, tables]) => {
+                const staffInfo = getStaffInfo(staffId);
+                return (
+                  <Card key={staffId}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <User className="w-5 h-5 text-primary" />
+                        <div>
+                          <CardTitle>{staffInfo.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">Usuario: @{staffInfo.username}</p>
+                        </div>
+                        <Badge variant="secondary">
+                          {Object.values(tables).flat().length} pedidos
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(tables).map(([table, sales]) => (
+                          <Card key={table} className="border-amber-500/50 border">
+                            <CardContent className="pt-4">
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="font-semibold text-lg">
+                                  {table === 'sin_mesa' ? 'Sin Mesa' : `Mesa ${table}`}
+                                </h4>
+                                <Badge className="bg-amber-500">
+                                  {sales.length}
+                                </Badge>
+                              </div>
+                              
+                              <div className="space-y-2 max-h-32 overflow-y-auto mb-4">
+                                {sales.map(sale => (
+                                  <div key={sale.id} className="text-sm p-2 bg-secondary/30 rounded">
+                                    <div className="flex justify-between">
+                                      <span className="text-xs text-muted-foreground">
+                                        {new Date(sale.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                      <span className="font-medium">{formatCurrency(sale.totalAmount)}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {sale.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              <div className="flex justify-between items-center pt-3 border-t">
+                                <span className="font-bold text-lg text-primary">
+                                  {formatCurrency(getTableTotal(sales))}
+                                </span>
+                                <Button size="sm" onClick={() => openPaymentDialog(staffId, table)}>
+                                  <DollarSign className="w-4 h-4 mr-1" />
+                                  Cobrar
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="paid">
+          {/* Filter by time */}
+          <div className="flex gap-2 mb-4">
+            <Button 
+              variant={viewFilter === 'today' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => setViewFilter('today')}
+            >
+              Hoy
+            </Button>
+            <Button 
+              variant={viewFilter === 'month' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => setViewFilter('month')}
+            >
+              Este Mes
+            </Button>
+            <Button 
+              variant={viewFilter === 'all' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => setViewFilter('all')}
+            >
+              Todo
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Mozo</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Mesa</TableHead>
+                    <TableHead>Productos</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paidSales.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <Receipt className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        No hay ventas cobradas en este período
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paidSales.map((sale) => {
+                      const staff = staffList.find(s => s.id === sale.staffId);
+                      return (
+                        <TableRow key={sale.id}>
+                          <TableCell>{formatDateTime(new Date(sale.createdAt))}</TableCell>
+                          <TableCell className="font-medium">{sale.staffName || 'Sin mozo'}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {staff?.username ? `@${staff.username}` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {sale.tableNumber ? `Mesa ${sale.tableNumber}` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm max-w-[200px]">
+                              {sale.items.map((item, idx) => (
+                                <span key={idx} className="text-muted-foreground">
+                                  {item.productName} x{item.quantity}
+                                  {idx < sale.items.length - 1 ? ', ' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-green-500/20 text-green-500">
+                              {paymentMethodLabels[sale.paymentMethod]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-primary">
+                            {formatCurrency(sale.totalAmount)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
@@ -296,7 +430,8 @@ export default function CashierCollect() {
           <div className="space-y-4">
             <div className="text-center p-4 bg-secondary/30 rounded-lg">
               <p className="text-sm text-muted-foreground">Mozo</p>
-              <p className="font-semibold">{selectedStaffForPayment && getStaffName(selectedStaffForPayment)}</p>
+              <p className="font-semibold">{selectedStaffForPayment && getStaffInfo(selectedStaffForPayment).name}</p>
+              <p className="text-xs text-muted-foreground">@{selectedStaffForPayment && getStaffInfo(selectedStaffForPayment).username}</p>
             </div>
             <div className="text-center p-4 bg-primary/10 rounded-lg">
               <p className="text-sm text-muted-foreground">Total a cobrar</p>
