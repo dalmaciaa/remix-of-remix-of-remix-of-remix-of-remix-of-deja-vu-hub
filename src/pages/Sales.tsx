@@ -155,36 +155,36 @@ export default function Sales() {
     setCart(cart.filter((c) => c.productId !== productId));
   };
 
-  const handleSubmitSale = () => {
+  const handleSubmitSale = async () => {
     if (cart.length === 0) {
       toast.error('Agrega productos al carrito');
       return;
     }
 
-    // Todas las ventas son pendientes de cobro por defecto
-    addSaleMutation.mutate({
-      items: cart,
-      paymentMethod: 'cash', // Default, se define cuando el cajero cobra
-      concept: concept || (tableNumber ? `Mesa ${tableNumber}` : 'Venta general'),
-      isPaid: false, // Siempre pendiente de cobro
-      tableNumber: tableNumber || undefined,
-      staffName: currentStaff?.full_name || undefined,
-      staffId: currentStaff?.id || undefined,
-    }, {
-      onSuccess: () => {
-        setCart([]);
-        setConcept('');
-        setTableNumber('');
-        setIsAddDialogOpen(false);
-      },
-      onError: (error) => {
-        // Check if it's a stock error
-        if (error.message.includes('Stock insuficiente')) {
-          setStockAlertMessage(error.message);
-          setIsStockAlertOpen(true);
-        }
+    try {
+      // Todas las ventas son pendientes de cobro por defecto
+      await addSaleMutation.mutateAsync({
+        items: cart,
+        paymentMethod: 'cash', // Default, se define cuando el cajero cobra
+        concept: concept || (tableNumber ? `Mesa ${tableNumber}` : 'Venta general'),
+        isPaid: false, // Siempre pendiente de cobro
+        tableNumber: tableNumber || undefined,
+        staffName: currentStaff?.full_name || undefined,
+        staffId: currentStaff?.id || undefined,
+      });
+      
+      // Limpiar estado y cerrar diálogo solo si fue exitoso
+      setCart([]);
+      setConcept('');
+      setTableNumber('');
+      setIsAddDialogOpen(false);
+    } catch (error: any) {
+      // Check if it's a stock error
+      if (error?.message?.includes('Stock insuficiente')) {
+        setStockAlertMessage(error.message);
+        setIsStockAlertOpen(true);
       }
-    });
+    }
   };
 
   const handleDeleteSale = (sale: SaleWithStatus) => {
