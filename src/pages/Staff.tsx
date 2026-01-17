@@ -51,7 +51,8 @@ const availableRoles: { value: AppRole; label: string }[] = [
   { value: 'admin', label: 'Administrador' },
   { value: 'mozo', label: 'Mozo' },
   { value: 'cocina', label: 'Cocina' },
-  { value: 'bartender', label: 'Bartender' }
+  { value: 'bartender', label: 'Bartender' },
+  { value: 'cajero', label: 'Cajero' }
 ];
 
 export default function Staff() {

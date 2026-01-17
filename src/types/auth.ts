@@ -1,4 +1,4 @@
-export type AppRole = 'admin' | 'mozo' | 'cocina' | 'bartender';
+export type AppRole = 'admin' | 'mozo' | 'cocina' | 'bartender' | 'cajero';
 
 export interface Staff {
   id: string;
@@ -24,15 +24,15 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
 }> = {
   admin: {
     label: 'Administrador',
-    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders'],
+    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders', '/my-history', '/cash-register'],
     defaultRoute: '/',
-    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders']
+    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders', 'my-history', 'cash-register']
   },
   mozo: {
     label: 'Mozo',
-    allowedRoutes: ['/sales', '/kitchen', '/bartender', '/my-orders'],
+    allowedRoutes: ['/sales', '/kitchen', '/bartender', '/my-orders', '/my-history'],
     defaultRoute: '/my-orders',
-    menuItems: ['sales', 'kitchen', 'bartender', 'my-orders']
+    menuItems: ['sales', 'kitchen', 'bartender', 'my-orders', 'my-history']
   },
   cocina: {
     label: 'Cocina',
@@ -45,6 +45,12 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
     allowedRoutes: ['/sales', '/bartender'],
     defaultRoute: '/bartender',
     menuItems: ['sales', 'bartender']
+  },
+  cajero: {
+    label: 'Cajero',
+    allowedRoutes: ['/cash-register', '/sales', '/expenses', '/staff-history'],
+    defaultRoute: '/cash-register',
+    menuItems: ['cash-register', 'sales', 'expenses', 'staff-history']
   }
 };
 
@@ -58,8 +64,8 @@ export function hasPermission(roles: AppRole[], route: string): boolean {
 }
 
 export function getDefaultRoute(roles: AppRole[]): string {
-  // Priority: admin > mozo > bartender > cocina
-  const priorityOrder: AppRole[] = ['admin', 'mozo', 'bartender', 'cocina'];
+  // Priority: admin > cajero > mozo > bartender > cocina
+  const priorityOrder: AppRole[] = ['admin', 'cajero', 'mozo', 'bartender', 'cocina'];
   
   for (const role of priorityOrder) {
     if (roles.includes(role)) {
@@ -82,4 +88,8 @@ export function getAllowedMenuItems(roles: AppRole[]): string[] {
 
 export function isAdmin(roles: AppRole[]): boolean {
   return roles.includes('admin');
+}
+
+export function isCashier(roles: AppRole[]): boolean {
+  return roles.includes('cajero') || roles.includes('admin');
 }

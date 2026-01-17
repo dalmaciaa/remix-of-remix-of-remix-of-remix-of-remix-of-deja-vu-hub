@@ -110,6 +110,120 @@ export type Database = {
           },
         ]
       }
+      cash_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          session_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          session_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_expenses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          expected_cash: number | null
+          expected_qr: number | null
+          expected_transfer: number | null
+          final_cash: number | null
+          id: string
+          initial_cash: number
+          is_event: boolean
+          notes: string | null
+          opened_at: string
+          opened_by: string | null
+          status: string
+          ticket_price: number | null
+          ticket_quantity: number | null
+          tickets_sold: number | null
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          expected_cash?: number | null
+          expected_qr?: number | null
+          expected_transfer?: number | null
+          final_cash?: number | null
+          id?: string
+          initial_cash?: number
+          is_event?: boolean
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+          ticket_price?: number | null
+          ticket_quantity?: number | null
+          tickets_sold?: number | null
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          expected_cash?: number | null
+          expected_qr?: number | null
+          expected_transfer?: number | null
+          final_cash?: number | null
+          id?: string
+          initial_cash?: number
+          is_event?: boolean
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+          ticket_price?: number | null
+          ticket_quantity?: number | null
+          tickets_sold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_complements: {
         Row: {
           created_at: string
@@ -707,7 +821,7 @@ export type Database = {
         | "internal_consumption"
         | "breakage"
         | "correction"
-      app_role: "admin" | "mozo" | "cocina" | "bartender"
+      app_role: "admin" | "mozo" | "cocina" | "bartender" | "cajero"
       expense_category:
         | "drinks"
         | "suppliers"
@@ -863,7 +977,7 @@ export const Constants = {
         "breakage",
         "correction",
       ],
-      app_role: ["admin", "mozo", "cocina", "bartender"],
+      app_role: ["admin", "mozo", "cocina", "bartender", "cajero"],
       expense_category: [
         "drinks",
         "suppliers",
