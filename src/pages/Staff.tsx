@@ -510,19 +510,25 @@ export default function Staff() {
               />
             </div>
             <div>
-              <Label>Roles *</Label>
+              <Label>Roles * <span className="text-muted-foreground text-xs font-normal">(puedes seleccionar varios)</span></Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {availableRoles.map(role => (
                   <Badge
                     key={role.value}
                     variant={formData.roles.includes(role.value) ? 'default' : 'outline'}
-                    className="cursor-pointer"
+                    className={`cursor-pointer transition-all ${formData.roles.includes(role.value) ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-secondary'}`}
                     onClick={() => toggleRole(role.value)}
                   >
+                    {formData.roles.includes(role.value) && '✓ '}
                     {role.label}
                   </Badge>
                 ))}
               </div>
+              {formData.roles.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Seleccionados: {formData.roles.map(r => availableRoles.find(ar => ar.value === r)?.label).join(', ')}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -577,19 +583,25 @@ export default function Staff() {
               />
             </div>
             <div>
-              <Label>Roles *</Label>
+              <Label>Roles * <span className="text-muted-foreground text-xs font-normal">(puedes seleccionar varios)</span></Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {availableRoles.map(role => (
                   <Badge
                     key={role.value}
                     variant={formData.roles.includes(role.value) ? 'default' : 'outline'}
-                    className="cursor-pointer"
+                    className={`cursor-pointer transition-all ${formData.roles.includes(role.value) ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-secondary'}`}
                     onClick={() => toggleRole(role.value)}
                   >
+                    {formData.roles.includes(role.value) && '✓ '}
                     {role.label}
                   </Badge>
                 ))}
               </div>
+              {formData.roles.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Seleccionados: {formData.roles.map(r => availableRoles.find(ar => ar.value === r)?.label).join(', ')}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
