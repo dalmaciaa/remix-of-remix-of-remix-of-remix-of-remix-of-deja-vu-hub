@@ -310,7 +310,8 @@ export function useAddSale() {
       const stockUpdates: Promise<void>[] = [];
       
       for (const item of items) {
-        const product = products.find(p => p.id === item.productId)!;
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
         
         // Para bebidas directas (no compuestas), descontar stock del producto
         if (product.category === 'drinks' && !product.is_compound) {
@@ -332,67 +333,73 @@ export function useAddSale() {
         if (product.is_compound) {
           stockUpdates.push(
             (async () => {
-              // Obtener la receta del producto
-              const { data: recipeItems, error: recipeError } = await supabase
-                .from('recipes')
-                .select('ingredient_id, quantity, unit')
-                .eq('product_id', item.productId);
+              try {
+                // Obtener la receta del producto
+                const { data: recipeItems, error: recipeError } = await supabase
+                  .from('recipes')
+                  .select('ingredient_id, quantity, unit')
+                  .eq('product_id', item.productId);
 
-              if (recipeError) {
-                console.error('Error fetching recipe:', recipeError);
-                return;
-              }
-
-              if (!recipeItems || recipeItems.length === 0) {
-                console.warn(`Producto compuesto ${product.name} sin receta configurada`);
-                return;
-              }
-
-              // Obtener los ingredientes actuales
-              const ingredientIds = recipeItems.map(r => r.ingredient_id);
-              const { data: ingredients, error: ingError } = await supabase
-                .from('products')
-                .select('id, quantity, min_stock, unit_base')
-                .in('id', ingredientIds);
-
-              if (ingError) {
-                console.error('Error fetching ingredients:', ingError);
-                return;
-              }
-
-              // Descontar cada ingrediente según la receta
-              for (const recipeItem of recipeItems) {
-                const ingredient = ingredients?.find(i => i.id === recipeItem.ingredient_id);
-                if (!ingredient) {
-                  console.warn(`Ingrediente no encontrado: ${recipeItem.ingredient_id}`);
-                  continue;
+                if (recipeError) {
+                  console.error('Error fetching recipe:', recipeError);
+                  return;
                 }
 
-                // Calcular cantidad a descontar (cantidad de receta * cantidad vendida)
-                const quantityToDeduct = Number(recipeItem.quantity) * item.quantity;
-                const currentQuantity = Number(ingredient.quantity);
-                const newIngredientQuantity = Math.max(0, currentQuantity - quantityToDeduct);
-                const newStatus = calculateStockStatus(newIngredientQuantity, ingredient.min_stock);
+                if (!recipeItems || recipeItems.length === 0) {
+                  console.warn(`Producto compuesto ${product.name} sin receta configurada`);
+                  return;
+                }
 
-                const { error: updateIngError } = await supabase
+                // Obtener los ingredientes actuales
+                const ingredientIds = recipeItems.map(r => r.ingredient_id);
+                const { data: ingredients, error: ingError } = await supabase
                   .from('products')
-                  .update({ 
-                    quantity: newIngredientQuantity, 
-                    status: newStatus 
-                  })
-                  .eq('id', recipeItem.ingredient_id);
+                  .select('id, quantity, min_stock, unit_base')
+                  .in('id', ingredientIds);
 
-                if (updateIngError) {
-                  console.error('Error updating ingredient stock:', updateIngError);
+                if (ingError) {
+                  console.error('Error fetching ingredients:', ingError);
+                  return;
                 }
+
+                // Descontar cada ingrediente según la receta
+                for (const recipeItem of recipeItems) {
+                  const ingredient = ingredients?.find(i => i.id === recipeItem.ingredient_id);
+                  if (!ingredient) {
+                    console.warn(`Ingrediente no encontrado: ${recipeItem.ingredient_id}`);
+                    continue;
+                  }
+
+                  // Calcular cantidad a descontar (cantidad de receta * cantidad vendida)
+                  const quantityToDeduct = Number(recipeItem.quantity) * item.quantity;
+                  const currentQuantity = Number(ingredient.quantity);
+                  const newIngredientQuantity = Math.max(0, currentQuantity - quantityToDeduct);
+                  const newStatus = calculateStockStatus(newIngredientQuantity, ingredient.min_stock);
+
+                  const { error: updateIngError } = await supabase
+                    .from('products')
+                    .update({ 
+                      quantity: newIngredientQuantity, 
+                      status: newStatus 
+                    })
+                    .eq('id', recipeItem.ingredient_id);
+
+                  if (updateIngError) {
+                    console.error('Error updating ingredient stock:', updateIngError);
+                  }
+                }
+              } catch (err) {
+                console.error('Error processing compound product stock:', err);
               }
             })()
           );
         }
       }
 
-      // Execute all stock updates in parallel
-      await Promise.all(stockUpdates);
+      // Execute all stock updates in parallel (with error handling)
+      if (stockUpdates.length > 0) {
+        await Promise.all(stockUpdates);
+      }
 
       return sale;
     },
