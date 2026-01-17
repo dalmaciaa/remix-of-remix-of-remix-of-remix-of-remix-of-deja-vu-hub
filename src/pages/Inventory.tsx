@@ -125,15 +125,18 @@ export default function Inventory() {
   };
 
   const handleAdd = () => {
-    const totalQuantity = calculateTotalQuantity();
-    // Si es insumo, el precio de venta es 0
-    const salePrice = formData.category === 'supplies' ? 0 : Number(formData.salePrice);
-    const purchasePrice = Number(formData.purchasePrice);
+    const totalQuantity = formData.category === 'semi_elaborated' 
+      ? Number(formData.quantity) || 0 
+      : calculateTotalQuantity();
+    // Si es insumo o semielaborado, el precio de venta es 0
+    // Si es semielaborado, el precio de compra también es 0
+    const salePrice = (formData.category === 'supplies' || formData.category === 'semi_elaborated') ? 0 : Number(formData.salePrice);
+    const purchasePrice = formData.category === 'semi_elaborated' ? 0 : Number(formData.purchasePrice);
     const unitsPerPackage = Number(formData.unitsPerPackage) || 1;
     const packageCount = Number(formData.packageCount) || 0;
     
-    // Calcular costo por unidad
-    const costPerUnit = totalQuantity > 0 ? purchasePrice / totalQuantity : null;
+    // Calcular costo por unidad (0 para semielaborados)
+    const costPerUnit = formData.category === 'semi_elaborated' ? 0 : (totalQuantity > 0 ? purchasePrice / totalQuantity : null);
     
     addProductMutation.mutate({
       name: formData.name,
@@ -156,15 +159,18 @@ export default function Inventory() {
 
   const handleEdit = () => {
     if (!selectedProduct) return;
-    const totalQuantity = calculateTotalQuantity();
-    // Si es insumo, el precio de venta es 0
-    const salePrice = formData.category === 'supplies' ? 0 : Number(formData.salePrice);
-    const purchasePrice = Number(formData.purchasePrice);
+    const totalQuantity = formData.category === 'semi_elaborated' 
+      ? Number(formData.quantity) || 0 
+      : calculateTotalQuantity();
+    // Si es insumo o semielaborado, el precio de venta es 0
+    // Si es semielaborado, el precio de compra también es 0
+    const salePrice = (formData.category === 'supplies' || formData.category === 'semi_elaborated') ? 0 : Number(formData.salePrice);
+    const purchasePrice = formData.category === 'semi_elaborated' ? 0 : Number(formData.purchasePrice);
     const unitsPerPackage = Number(formData.unitsPerPackage) || 1;
     const packageCount = Number(formData.packageCount) || 0;
     
-    // Calcular costo por unidad
-    const costPerUnit = totalQuantity > 0 ? purchasePrice / totalQuantity : null;
+    // Calcular costo por unidad (0 para semielaborados)
+    const costPerUnit = formData.category === 'semi_elaborated' ? 0 : (totalQuantity > 0 ? purchasePrice / totalQuantity : null);
     
     updateProductMutation.mutate({
       id: selectedProduct.id,
@@ -351,11 +357,17 @@ export default function Inventory() {
     setRecipeIngredients(updated);
   };
 
-  // Mostrar precio de venta solo si no es insumo
-  const showSalePrice = formData.category !== 'supplies';
+  // Mostrar precio de venta solo si no es insumo ni semielaborado
+  const showSalePrice = formData.category !== 'supplies' && formData.category !== 'semi_elaborated';
   
-  // Mostrar separación de paquetes para insumos y bebidas
+  // Mostrar precio de compra solo si no es semielaborado
+  const showPurchasePrice = formData.category !== 'semi_elaborated';
+  
+  // Mostrar separación de paquetes para insumos y bebidas (no para semielaborados)
   const showPackageSeparation = formData.category === 'supplies' || formData.category === 'drinks';
+  
+  // Los semielaborados se manejan en unidades simples
+  const isSemiElaborated = formData.category === 'semi_elaborated';
 
   const productFormContent = (
     <div className="space-y-4">
@@ -470,30 +482,43 @@ export default function Inventory() {
         </div>
       )}
 
-      <div className={cn("grid gap-4", showSalePrice ? "grid-cols-2" : "grid-cols-1")}>
-        <div>
-          <Label htmlFor="purchasePrice">Precio Compra (por paquete)</Label>
-          <Input
-            id="purchasePrice"
-            type="number"
-            value={formData.purchasePrice}
-            onChange={(e) => setFormData((prev) => ({ ...prev, purchasePrice: e.target.value }))}
-            placeholder="0"
-          />
-        </div>
-        {showSalePrice && (
+      {/* Precios - Solo mostrar si no es semielaborado */}
+      {showPurchasePrice && (
+        <div className={cn("grid gap-4", showSalePrice ? "grid-cols-2" : "grid-cols-1")}>
           <div>
-            <Label htmlFor="salePrice">Precio Venta</Label>
+            <Label htmlFor="purchasePrice">Precio Compra (por paquete)</Label>
             <Input
-              id="salePrice"
+              id="purchasePrice"
               type="number"
-              value={formData.salePrice}
-              onChange={(e) => setFormData((prev) => ({ ...prev, salePrice: e.target.value }))}
+              value={formData.purchasePrice}
+              onChange={(e) => setFormData((prev) => ({ ...prev, purchasePrice: e.target.value }))}
               placeholder="0"
             />
           </div>
-        )}
-      </div>
+          {showSalePrice && (
+            <div>
+              <Label htmlFor="salePrice">Precio Venta</Label>
+              <Input
+                id="salePrice"
+                type="number"
+                value={formData.salePrice}
+                onChange={(e) => setFormData((prev) => ({ ...prev, salePrice: e.target.value }))}
+                placeholder="0"
+              />
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Mensaje para semielaborados */}
+      {isSemiElaborated && (
+        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-sm text-blue-500 font-medium">💡 Producto Semielaborado</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Los semielaborados no tienen precio de compra ni venta. Se cuentan en unidades y sirven como ingredientes para productos del catálogo de venta.
+          </p>
+        </div>
+      )}
       <div>
         <Label htmlFor="minStock">Stock Mínimo ({formData.unitBase})</Label>
         <Input

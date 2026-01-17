@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { useProducts } from '@/hooks/useProducts';
 import { useSales, useAddSale, useDeleteSale, useUpdatePaymentStatus, SaleWithStatus, PaymentStatus } from '@/hooks/useSales';
 import { PaymentMethod, CatalogCategory } from '@/types';
@@ -57,9 +56,8 @@ export default function Sales() {
 
   // Cart state for new sale
   const [cart, setCart] = useState<{ productId: string; quantity: number; notes?: string }[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [concept, setConcept] = useState('');
-  const [isPaid, setIsPaid] = useState(true);
+  
   const [tableNumber, setTableNumber] = useState('');
 
   // Payment dialog state
@@ -160,17 +158,12 @@ export default function Sales() {
       return;
     }
 
-    // Si está marcado como cobrado pero no hay método de pago, error
-    if (isPaid && !paymentMethod) {
-      toast.error('Selecciona un método de pago');
-      return;
-    }
-
+    // Todas las ventas son pendientes de cobro por defecto
     addSaleMutation.mutate({
       items: cart,
-      paymentMethod: isPaid ? paymentMethod : 'cash', // Default si no está cobrado
-      concept: concept || tableNumber ? `Mesa ${tableNumber}` : 'Venta general',
-      isPaid,
+      paymentMethod: 'cash', // Default, se define cuando el cajero cobra
+      concept: concept || (tableNumber ? `Mesa ${tableNumber}` : 'Venta general'),
+      isPaid: false, // Siempre pendiente de cobro
       tableNumber: tableNumber || undefined,
       staffName: currentStaff?.full_name || undefined,
       staffId: currentStaff?.id || undefined,
@@ -179,8 +172,6 @@ export default function Sales() {
         setCart([]);
         setConcept('');
         setTableNumber('');
-        setPaymentMethod('cash');
-        setIsPaid(true);
         setIsAddDialogOpen(false);
       }
     });
@@ -527,37 +518,16 @@ export default function Sales() {
                   </div>
                 </div>
 
-                {/* Cobrado Switch */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                {/* Info de que es pendiente */}
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <Clock className="w-5 h-5 text-amber-500" />
                   <div>
-                    <Label htmlFor="isPaid" className="font-medium">¿Está cobrado?</Label>
+                    <p className="text-sm font-medium text-amber-500">Pendiente de cobro</p>
                     <p className="text-xs text-muted-foreground">
-                      Si no está cobrado, aparecerá como pendiente
+                      El cajero marcará como cobrado cuando reciba el pago
                     </p>
                   </div>
-                  <Switch
-                    id="isPaid"
-                    checked={isPaid}
-                    onCheckedChange={setIsPaid}
-                  />
                 </div>
-
-                {/* Payment Method - only if paid */}
-                {isPaid && (
-                  <div>
-                    <Label>Método de Pago</Label>
-                    <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Efectivo</SelectItem>
-                        <SelectItem value="transfer">Transferencia</SelectItem>
-                        <SelectItem value="qr">QR</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <div className="flex justify-between items-center py-3 border-t border-border">
                   <span className="text-lg font-semibold">Total</span>
@@ -571,7 +541,7 @@ export default function Sales() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmitSale} disabled={cart.length === 0 || addSaleMutation.isPending}>
               {addSaleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {isPaid ? 'Registrar Venta' : 'Registrar (Pendiente de Cobro)'}
+              Registrar Pedido
             </Button>
           </DialogFooter>
         </DialogContent>
