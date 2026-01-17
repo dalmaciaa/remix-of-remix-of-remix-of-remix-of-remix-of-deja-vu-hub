@@ -318,24 +318,60 @@ export default function Catalog() {
     try {
       setSaving(true);
 
-      // First delete associated recipes
-      await supabase
-        .from('recipes')
-        .delete()
-        .eq('product_id', selectedProduct.id);
+      // Check if product is used in any sales
+      const { data: saleItems, error: checkError } = await supabase
+        .from('sale_items')
+        .select('id')
+        .eq('product_id', selectedProduct.id)
+        .limit(1);
 
-      // Then delete the product
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', selectedProduct.id);
+      if (checkError) throw checkError;
 
-      if (error) throw error;
+      if (saleItems && saleItems.length > 0) {
+        // Product is used in sales, just mark as not for sale instead of deleting
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ is_for_sale: false })
+          .eq('id', selectedProduct.id);
 
-      toast({
-        title: 'Producto eliminado',
-        description: `${selectedProduct.name} ha sido eliminado`
-      });
+        if (updateError) throw updateError;
+
+        toast({
+          title: 'Producto ocultado',
+          description: `${selectedProduct.name} ha sido removido del catálogo (tiene ventas asociadas, no se puede eliminar completamente)`
+        });
+      } else {
+        // No sales, safe to delete completely
+        // First delete associated recipes
+        await supabase
+          .from('recipes')
+          .delete()
+          .eq('product_id', selectedProduct.id);
+
+        // Also delete kitchen/bartender order items that reference this product
+        await supabase
+          .from('kitchen_order_items')
+          .delete()
+          .eq('product_id', selectedProduct.id);
+
+        await supabase
+          .from('bartender_order_items')
+          .delete()
+          .eq('product_id', selectedProduct.id);
+
+        // Then delete the product
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', selectedProduct.id);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Producto eliminado',
+          description: `${selectedProduct.name} ha sido eliminado completamente`
+        });
+      }
 
       setIsDeleteDialogOpen(false);
       setSelectedProduct(null);
@@ -345,7 +381,7 @@ export default function Catalog() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'No se pudo eliminar el producto. Puede estar siendo usado en ventas.'
+        description: error.message || 'No se pudo eliminar el producto'
       });
     } finally {
       setSaving(false);

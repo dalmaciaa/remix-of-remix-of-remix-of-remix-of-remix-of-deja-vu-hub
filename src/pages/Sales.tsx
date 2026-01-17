@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useProducts } from '@/hooks/useProducts';
 import { useSales, useAddSale, useDeleteSale, useUpdatePaymentStatus, SaleWithStatus, PaymentStatus } from '@/hooks/useSales';
 import { PaymentMethod, CatalogCategory } from '@/types';
 import { formatCurrency, formatDateTime, paymentMethodLabels, catalogCategoryLabels, isToday, isThisMonth } from '@/lib/utils-format';
-import { Plus, Trash2, ShoppingCart, Search, Minus, X, Receipt, Loader2, Check, Clock, DollarSign } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Search, Minus, X, Receipt, Loader2, Check, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
@@ -33,6 +34,8 @@ export default function Sales() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isStockAlertOpen, setIsStockAlertOpen] = useState(false);
+  const [stockAlertMessage, setStockAlertMessage] = useState('');
   const [selectedSale, setSelectedSale] = useState<SaleWithStatus | null>(null);
 
   const { data: allProducts = [], isLoading: loadingProducts } = useProducts();
@@ -173,6 +176,13 @@ export default function Sales() {
         setConcept('');
         setTableNumber('');
         setIsAddDialogOpen(false);
+      },
+      onError: (error) => {
+        // Check if it's a stock error
+        if (error.message.includes('Stock insuficiente')) {
+          setStockAlertMessage(error.message);
+          setIsStockAlertOpen(true);
+        }
       }
     });
   };
@@ -584,6 +594,26 @@ export default function Sales() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Stock Alert Dialog */}
+      <AlertDialog open={isStockAlertOpen} onOpenChange={setIsStockAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Stock Insuficiente
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {stockAlertMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsStockAlertOpen(false)}>
+              Entendido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }
