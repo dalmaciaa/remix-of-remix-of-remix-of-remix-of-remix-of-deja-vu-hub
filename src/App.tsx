@@ -14,6 +14,9 @@ import Events from "./pages/Events";
 import Kitchen from "./pages/Kitchen";
 import Bartender from "./pages/Bartender";
 import MyOrders from "./pages/MyOrders";
+import MyHistory from "./pages/MyHistory";
+import CashRegister from "./pages/CashRegister";
+import StaffHistory from "./pages/StaffHistory";
 import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
 import Login from "./pages/Login";
@@ -39,6 +42,9 @@ const App = () => (
             <Route path="/kitchen" element={<ProtectedRoute><Kitchen /></ProtectedRoute>} />
             <Route path="/bartender" element={<ProtectedRoute><Bartender /></ProtectedRoute>} />
             <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+            <Route path="/my-history" element={<ProtectedRoute><MyHistory /></ProtectedRoute>} />
+            <Route path="/cash-register" element={<ProtectedRoute><CashRegister /></ProtectedRoute>} />
+            <Route path="/staff-history" element={<ProtectedRoute><StaffHistory /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
             <Route path="/internal-consumption" element={<ProtectedRoute><InternalConsumption /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

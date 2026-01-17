@@ -64,8 +64,8 @@ const categories: { value: CatalogCategory; label: string; icon: React.Component
 
 const units = ['g', 'kg', 'ml', 'L', 'unidad', 'medida', 'oz'];
 
-// Categorías de inventario para ingredientes
-const INVENTORY_CATEGORIES: InventoryCategory[] = ['supplies', 'drinks', 'others'];
+// Categorías de inventario para ingredientes (incluye semielaborados)
+const INVENTORY_CATEGORIES: InventoryCategory[] = ['supplies', 'drinks', 'others', 'semi_elaborated'];
 
 export default function Catalog() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
