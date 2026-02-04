@@ -3,6 +3,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PaymentMethod } from '@/types';
 
+export function useDeleteInventoryPurchase() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (purchaseId: string) => {
+      const { error } = await supabase
+        .from('inventory_purchases')
+        .delete()
+        .eq('id', purchaseId);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-purchases'] });
+      toast({
+        title: 'Compra eliminada',
+        description: 'El registro fue eliminado del historial',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error al eliminar',
+        description: error.message || 'No se pudo eliminar el registro',
+      });
+    },
+  });
+}
+
 interface InventoryPurchase {
   id: string;
   product_id: string | null;
