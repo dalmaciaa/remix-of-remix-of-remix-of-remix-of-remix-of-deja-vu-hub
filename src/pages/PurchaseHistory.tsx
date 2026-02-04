@@ -1,17 +1,20 @@
 import { Layout } from '@/components/layout/Layout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useInventoryPurchases } from '@/hooks/useInventoryPurchases';
+import { useInventoryPurchases, useDeleteInventoryPurchase } from '@/hooks/useInventoryPurchases';
 import { formatCurrency, paymentMethodLabels } from '@/lib/utils-format';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Loader2, Package, ShoppingCart } from 'lucide-react';
+import { Loader2, Package, ShoppingCart, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function PurchaseHistory() {
   const { data: purchases = [], isLoading } = useInventoryPurchases();
+  const deletePurchase = useDeleteInventoryPurchase();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredPurchases = purchases.filter(p =>
@@ -72,12 +75,13 @@ export default function PurchaseHistory() {
               <TableHead className="text-right">Precio Compra</TableHead>
               <TableHead className="text-center hidden sm:table-cell">Método Pago</TableHead>
               <TableHead className="hidden md:table-cell">Notas</TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredPurchases.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   No hay compras registradas
                 </TableCell>
@@ -114,6 +118,32 @@ export default function PurchaseHistory() {
                     <span className="text-sm text-muted-foreground">
                       {purchase.notes || '-'}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción eliminará el registro de compra de "{purchase.product_name}" del historial. Esta acción no se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deletePurchase.mutate(purchase.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))
