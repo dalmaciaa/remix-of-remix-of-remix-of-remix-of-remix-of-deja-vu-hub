@@ -74,6 +74,8 @@ export function useAddProduct() {
       // Si tiene precio de compra, registrar como gasto y en historial de compras
       // Solo para productos que no son semielaborados
       if (product.purchasePrice > 0 && product.category !== 'semi_elaborated') {
+        const totalCost = product.purchasePrice * product.quantity;
+
         // Registrar en historial de compras
         const { error: purchaseError } = await supabase
           .from('inventory_purchases')
@@ -83,7 +85,7 @@ export function useAddProduct() {
             quantity: product.quantity,
             unit: product.unitBase || 'unidad',
             purchase_price: product.purchasePrice,
-            total_cost: product.purchasePrice,
+            total_cost: totalCost,
             payment_method: 'cash',
             notes: 'Compra inicial al agregar producto',
           });
@@ -96,9 +98,9 @@ export function useAddProduct() {
         const { error: expenseError } = await supabase
           .from('expenses')
           .insert({
-            amount: product.purchasePrice,
+            amount: totalCost,
             category: product.category === 'drinks' ? 'drinks' : 'suppliers',
-            description: `Compra: ${product.name}`,
+            description: `Compra: ${product.name} (${product.quantity} ${product.unitBase || 'unidad'})`,
             payment_method: 'cash',
           });
 
