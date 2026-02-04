@@ -80,7 +80,7 @@ export function useRestockProduct() {
 
   return useMutation({
     mutationFn: async (data: RestockData) => {
-      const totalCost = data.purchasePrice;
+      const totalCost = data.purchasePrice * data.quantity;
 
       // 1. Register the purchase in inventory_purchases
       const { error: purchaseError } = await supabase
@@ -113,7 +113,7 @@ export function useRestockProduct() {
       const newStatus = newQuantity <= 0 ? 'critical' : newQuantity <= productData.min_stock ? 'low' : 'normal';
       
       // Calculate cost per unit based on new purchase
-      const costPerUnit = data.quantity > 0 ? data.purchasePrice / data.quantity : null;
+      const costPerUnit = data.purchasePrice;
 
       const { error: updateError } = await supabase
         .from('products')
