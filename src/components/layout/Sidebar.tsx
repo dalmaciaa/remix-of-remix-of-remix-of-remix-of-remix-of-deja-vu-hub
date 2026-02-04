@@ -17,7 +17,8 @@ import {
   ClipboardList,
   History,
   Banknote,
-  DollarSign
+  DollarSign,
+  ShoppingBasket
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -52,6 +53,7 @@ const allNavItems: NavItem[] = [
   { id: 'bartender', path: '/bartender', label: 'Pedidos de Barra', icon: Wine },
   { id: 'staff', path: '/staff', label: 'Personal', icon: Users },
   { id: 'internal-consumption', path: '/internal-consumption', label: 'Consumo Interno', icon: Coffee },
+  { id: 'purchase-history', path: '/purchase-history', label: 'Historial Compras', icon: ShoppingBasket },
 ];
 
 export function Sidebar() {

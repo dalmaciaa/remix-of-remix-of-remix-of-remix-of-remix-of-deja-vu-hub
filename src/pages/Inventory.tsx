@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct, useAdjustStock } from '@/hooks/useProducts';
-import { Product, InventoryCategory, StockAdjustment, UnitType } from '@/types';
-import { formatCurrency, inventoryCategoryLabels, stockStatusLabels, adjustmentReasonLabels, unitLabels } from '@/lib/utils-format';
-import { Plus, Pencil, Trash2, AlertTriangle, AlertCircle, Package, Search, Settings2, Loader2, BookOpen, Factory } from 'lucide-react';
+import { useRestockProduct } from '@/hooks/useInventoryPurchases';
+import { Product, InventoryCategory, StockAdjustment, UnitType, PaymentMethod } from '@/types';
+import { formatCurrency, inventoryCategoryLabels, stockStatusLabels, adjustmentReasonLabels, unitLabels, paymentMethodLabels } from '@/lib/utils-format';
+import { Plus, Pencil, Trash2, AlertTriangle, AlertCircle, Package, Search, Settings2, Loader2, BookOpen, Factory, RefreshCw, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -54,6 +55,7 @@ export default function Inventory() {
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
   const adjustStockMutation = useAdjustStock();
+  const restockMutation = useRestockProduct();
 
   // Filtrar solo productos de inventario (no del catálogo de venta)
   const products = allProducts.filter(p => INVENTORY_CATEGORIES.includes(p.category as InventoryCategory));
@@ -339,10 +341,62 @@ export default function Inventory() {
   const [produceQuantity, setProduceQuantity] = useState('1');
   const [producing, setProducing] = useState(false);
 
+  // State for restocking products
+  const [isRestockDialogOpen, setIsRestockDialogOpen] = useState(false);
+  const [restockData, setRestockData] = useState({
+    quantity: '',
+    purchasePrice: '',
+    paymentMethod: 'cash' as PaymentMethod,
+    notes: '',
+  });
+
   const openProduceDialog = (product: Product) => {
     setSelectedProduct(product);
     setProduceQuantity('1');
     setIsProduceDialogOpen(true);
+  };
+
+  const openRestockDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setRestockData({
+      quantity: '',
+      purchasePrice: '',
+      paymentMethod: 'cash',
+      notes: '',
+    });
+    setIsRestockDialogOpen(true);
+  };
+
+  const handleRestock = () => {
+    if (!selectedProduct) return;
+    
+    const quantity = Number(restockData.quantity);
+    const purchasePrice = Number(restockData.purchasePrice);
+    
+    if (quantity <= 0 || purchasePrice <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'La cantidad y precio deben ser mayores a 0',
+      });
+      return;
+    }
+
+    restockMutation.mutate({
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      quantity: quantity,
+      unit: selectedProduct.unitBase || 'unidad',
+      purchasePrice: purchasePrice,
+      paymentMethod: restockData.paymentMethod,
+      notes: restockData.notes || undefined,
+    }, {
+      onSuccess: () => {
+        setIsRestockDialogOpen(false);
+        setSelectedProduct(null);
+        refetch();
+      }
+    });
   };
 
   const handleProduce = async () => {
@@ -675,10 +729,18 @@ export default function Inventory() {
   return (
     <Layout>
       <PageHeader title="Inventario" description="Gestión de stock, insumos y semielaborados">
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar al Inventario
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/purchase-history">
+              <History className="w-4 h-4 mr-2" />
+              Historial Compras
+            </Link>
+          </Button>
+          <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar
+          </Button>
+        </div>
       </PageHeader>
 
       {/* Stats */}
@@ -803,13 +865,18 @@ export default function Inventory() {
                               </Button>
                             </>
                           )}
-                          <Button variant="ghost" size="icon" onClick={() => openAdjustDialog(product)}>
+                          {product.category !== 'semi_elaborated' && (
+                            <Button variant="ghost" size="icon" onClick={() => openRestockDialog(product)} title="Reabastecer">
+                              <RefreshCw className="w-4 h-4 text-success" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => openAdjustDialog(product)} title="Ajustar stock">
                             <Settings2 className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} title="Editar">
                             <Pencil className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(product)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(product)} title="Eliminar">
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </div>
@@ -1015,6 +1082,85 @@ export default function Inventory() {
             <Button onClick={handleProduce} disabled={producing}>
               {producing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Factory className="w-4 h-4 mr-2" />}
               Fabricar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restock Dialog */}
+      <Dialog open={isRestockDialogOpen} onOpenChange={setIsRestockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reabastecer: {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-secondary/30 rounded-lg">
+              <p className="text-sm text-muted-foreground">Stock actual</p>
+              <p className="text-lg font-semibold">{selectedProduct?.quantity} {selectedProduct?.unitBase}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Precio de compra anterior: {formatCurrency(selectedProduct?.purchasePrice || 0)}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="restockQuantity">Cantidad a agregar</Label>
+                <Input
+                  id="restockQuantity"
+                  type="number"
+                  step="0.01"
+                  value={restockData.quantity}
+                  onChange={(e) => setRestockData({ ...restockData, quantity: e.target.value })}
+                  placeholder={`Ej: 10 ${selectedProduct?.unitBase || 'unidades'}`}
+                />
+              </div>
+              <div>
+                <Label htmlFor="restockPrice">Precio de compra (total)</Label>
+                <Input
+                  id="restockPrice"
+                  type="number"
+                  value={restockData.purchasePrice}
+                  onChange={(e) => setRestockData({ ...restockData, purchasePrice: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="restockPayment">Método de pago</Label>
+              <Select
+                value={restockData.paymentMethod}
+                onValueChange={(value) => setRestockData({ ...restockData, paymentMethod: value as PaymentMethod })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Efectivo</SelectItem>
+                  <SelectItem value="transfer">Transferencia</SelectItem>
+                  <SelectItem value="qr">QR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="restockNotes">Notas (opcional)</Label>
+              <Input
+                id="restockNotes"
+                value={restockData.notes}
+                onChange={(e) => setRestockData({ ...restockData, notes: e.target.value })}
+                placeholder="Ej: Proveedor X, factura #123"
+              />
+            </div>
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <p className="text-sm font-medium text-destructive">💰 Gasto a registrar</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Se registrará como gasto (saldo negativo) por {formatCurrency(Number(restockData.purchasePrice) || 0)}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRestockDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleRestock} disabled={restockMutation.isPending}>
+              {restockMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Reabastecer
             </Button>
           </DialogFooter>
         </DialogContent>
