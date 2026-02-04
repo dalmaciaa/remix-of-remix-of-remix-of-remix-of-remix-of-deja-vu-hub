@@ -71,9 +71,28 @@ export function useAddProduct() {
 
       if (error) throw error;
 
-      // Si tiene precio de compra, registrar como gasto (saldo negativo)
+      // Si tiene precio de compra, registrar como gasto y en historial de compras
       // Solo para productos que no son semielaborados
       if (product.purchasePrice > 0 && product.category !== 'semi_elaborated') {
+        // Registrar en historial de compras
+        const { error: purchaseError } = await supabase
+          .from('inventory_purchases')
+          .insert({
+            product_id: data.id,
+            product_name: product.name,
+            quantity: product.quantity,
+            unit: product.unitBase || 'unidad',
+            purchase_price: product.purchasePrice,
+            total_cost: product.purchasePrice,
+            payment_method: 'cash',
+            notes: 'Compra inicial al agregar producto',
+          });
+
+        if (purchaseError) {
+          console.error('Error registering inventory purchase:', purchaseError);
+        }
+
+        // Registrar como gasto (saldo negativo)
         const { error: expenseError } = await supabase
           .from('expenses')
           .insert({
@@ -85,7 +104,6 @@ export function useAddProduct() {
 
         if (expenseError) {
           console.error('Error registering purchase expense:', expenseError);
-          // No lanzamos error aquí para no bloquear la creación del producto
         }
       }
 
@@ -94,6 +112,7 @@ export function useAddProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-purchases'] });
       toast.success('Producto agregado');
     },
     onError: (error) => {
