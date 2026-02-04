@@ -25,9 +25,9 @@ export const ROLE_PERMISSIONS: Record<AppRole, {
   admin: {
     label: 'Administrador',
     // Admin tiene acceso ABSOLUTO a todo
-    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders', '/my-history', '/cash-register', '/staff-history', '/cashier-collect'],
+    allowedRoutes: ['/', '/inventory', '/catalog', '/sales', '/expenses', '/events', '/kitchen', '/bartender', '/staff', '/internal-consumption', '/my-orders', '/my-history', '/cash-register', '/staff-history', '/cashier-collect', '/purchase-history'],
     defaultRoute: '/',
-    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders', 'my-history', 'cash-register', 'staff-history', 'cashier-collect']
+    menuItems: ['dashboard', 'inventory', 'catalog', 'sales', 'expenses', 'events', 'kitchen', 'bartender', 'staff', 'internal-consumption', 'my-orders', 'my-history', 'cash-register', 'staff-history', 'cashier-collect', 'purchase-history']
   },
   mozo: {
     label: 'Mozo',

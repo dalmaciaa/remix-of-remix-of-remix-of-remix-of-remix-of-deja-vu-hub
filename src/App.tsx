@@ -20,6 +20,7 @@ import CashierCollect from "./pages/CashierCollect";
 import StaffHistory from "./pages/StaffHistory";
 import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
+import PurchaseHistory from "./pages/PurchaseHistory";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/staff-history" element={<ProtectedRoute><StaffHistory /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
             <Route path="/internal-consumption" element={<ProtectedRoute><InternalConsumption /></ProtectedRoute>} />
+            <Route path="/purchase-history" element={<ProtectedRoute><PurchaseHistory /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

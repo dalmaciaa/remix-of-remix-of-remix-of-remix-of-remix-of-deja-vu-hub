@@ -331,6 +331,63 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_purchases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          product_id: string | null
+          product_name: string
+          purchase_price: number
+          quantity: number
+          total_cost: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          product_id?: string | null
+          product_name: string
+          purchase_price: number
+          quantity: number
+          total_cost: number
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          product_id?: string | null
+          product_name?: string
+          purchase_price?: number
+          quantity?: number
+          total_cost?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_purchases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kitchen_order_items: {
         Row: {
           created_at: string
