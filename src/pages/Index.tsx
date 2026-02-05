@@ -234,12 +234,12 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="flex flex-col gap-4 mb-6">
         {/* Header row */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-semibold">Dashboard</h1>
-            <p className="text-muted-foreground text-sm sm:text-base mt-1">Resumen general de Deja-Vu</p>
+            <h1 className="font-display text-2xl lg:text-3xl font-semibold">Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Resumen general de Deja-Vu</p>
           </div>
           
           {/* Search Bar */}
@@ -285,11 +285,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Date Filter - scrollable on mobile */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
-          <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        {/* Date Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-muted-foreground" />
           <Select value={quickFilter} onValueChange={(v) => setQuickFilter(v as QuickFilter)}>
-            <SelectTrigger className="w-32 sm:w-40 flex-shrink-0">
+            <SelectTrigger className="w-40">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
@@ -303,18 +303,18 @@ export default function Dashboard() {
           {quickFilter === 'custom' && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
+                <Button variant="outline" size="sm" className="gap-2">
                   <CalendarIcon className="w-4 h-4" />
                   {dateRange?.from ? (
                     dateRange.to ? (
                       <>
-                        {format(dateRange.from, 'dd/MM')} - {format(dateRange.to, 'dd/MM')}
+                        {format(dateRange.from, 'dd/MM/yy')} - {format(dateRange.to, 'dd/MM/yy')}
                       </>
                     ) : (
-                      format(dateRange.from, 'dd/MM')
+                      format(dateRange.from, 'dd/MM/yy')
                     )
                   ) : (
-                    'Fechas'
+                    'Seleccionar fechas'
                   )}
                 </Button>
               </PopoverTrigger>
@@ -325,27 +325,26 @@ export default function Dashboard() {
                   defaultMonth={dateRange?.from}
                   selected={dateRange}
                   onSelect={setDateRange}
-                  numberOfMonths={1}
+                  numberOfMonths={2}
                   locale={es}
-                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
           )}
           
-          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-            <span className="font-medium text-foreground">{getFilterLabel()}</span>
+          <span className="text-sm text-muted-foreground ml-2">
+            Mostrando: <span className="font-medium text-foreground">{getFilterLabel()}</span>
           </span>
         </div>
       </div>
 
-      {/* Low Stock Alert */}
-      <div className="mb-4 sm:mb-6">
+      {/* Low Stock Alert - Prominent position */}
+      <div className="mb-6">
         <LowStockAlert />
       </div>
 
-      {/* Stats Grid - 2 columns on mobile */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard
           title="Ingresos Hoy"
           value={formatCurrency(todayIncome)}
@@ -376,7 +375,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top Products */}
-      <div className="mb-4 sm:mb-6">
+      <div className="mb-6">
         <TopProducts 
           dateFilter={quickFilter === 'custom' ? 'all' : quickFilter}
           startDate={quickFilter === 'custom' ? dateRange?.from : null}
@@ -384,17 +383,19 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts - Stack on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
-        <StaffRanking />
+      {/* Charts - Responsive grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-6">
+        <div className="md:col-span-2 xl:col-span-1">
+          <StaffRanking />
+        </div>
         <SalesChart />
         <PaymentMethodChart />
       </div>
 
       {/* Category Stats */}
-      <div className="glass-card p-4 sm:p-6 animate-fade-in">
-        <h3 className="font-display text-base sm:text-lg font-semibold mb-3 sm:mb-4">Inventario por Categoría</h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
+      <div className="glass-card p-6 animate-fade-in">
+        <h3 className="font-display text-lg font-semibold mb-4">Inventario por Categoría</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {categoryStats.map((stat) => (
             <Link
               key={stat.category}
