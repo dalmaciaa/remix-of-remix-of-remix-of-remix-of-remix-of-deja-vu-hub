@@ -168,7 +168,7 @@ export default function Login() {
               </Button>
             </form>}
 
-          <p className="text-xs text-muted-foreground text-center mt-6">Sistema de Gestión v26.7.0</p>
+          <p className="text-xs text-muted-foreground text-center mt-6">Sistema de Gestión v35.7.0</p>
         </div>
       </div>
     </div>;
