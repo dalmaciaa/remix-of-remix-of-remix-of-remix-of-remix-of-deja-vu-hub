@@ -217,7 +217,7 @@ export function Sidebar() {
               Cerrar Sesión
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              Sistema de Gestión v2.0
+              Sistema de Gestión v35.7.0
             </p>
           </div>
         </div>
