@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 // Admin email for notifications
-const ADMIN_EMAIL = "salmitasotelo15@gmail.com";
+const ADMIN_EMAIL = "dejavuregistro67@gmail.com";
 
 interface LoginRequest {
   username: string;
