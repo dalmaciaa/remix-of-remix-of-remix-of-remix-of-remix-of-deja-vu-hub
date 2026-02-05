@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { isCashier } from '@/types/auth';
 
 type ViewFilter = 'today' | 'month' | 'all';
 type CategoryFilter = CatalogCategory | 'all';
@@ -43,7 +44,8 @@ export default function Sales() {
   const addSaleMutation = useAddSale();
   const deleteSaleMutation = useDeleteSale();
   const updatePaymentMutation = useUpdatePaymentStatus();
-  const { currentStaff } = useAuth();
+  const { currentStaff, roles } = useAuth();
+  const canCollectPayment = isCashier(roles);
 
   // Filtrar solo productos del catálogo de venta
   // Para comida y cócteles no se valida stock (se elaboran bajo pedido)
@@ -385,7 +387,7 @@ export default function Sales() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            {isUnpaid && (
+                            {isUnpaid && canCollectPayment && (
                               <Button 
                                 variant="outline" 
                                 size="sm" 
