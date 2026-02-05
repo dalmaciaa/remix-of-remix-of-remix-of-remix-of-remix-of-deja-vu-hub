@@ -27,7 +27,7 @@ interface QuickNavItem {
 const quickNavItems: QuickNavItem[] = [
   { id: 'dashboard', path: '/', label: 'Panel', icon: LayoutDashboard },
   { id: 'my-orders', path: '/my-orders', label: 'Pedidos', icon: ClipboardList },
-  { id: 'catalog', path: '/catalog', label: 'Venta', icon: Package },
+  { id: 'catalog', path: '/catalog', label: 'Catálogo', icon: Package },
   { id: 'kitchen', path: '/kitchen', label: 'Cocina', icon: ChefHat },
   { id: 'bartender', path: '/bartender', label: 'Barra', icon: Wine },
   { id: 'cashier-collect', path: '/cashier-collect', label: 'Cobrar', icon: DollarSign },
