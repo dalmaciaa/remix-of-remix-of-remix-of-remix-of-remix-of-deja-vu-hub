@@ -56,7 +56,11 @@ const allNavItems: NavItem[] = [
   { id: 'purchase-history', path: '/purchase-history', label: 'Historial Compras', icon: ShoppingBasket },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobileSheet?: boolean;
+}
+
+export function Sidebar({ isMobileSheet = false }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, currentStaff, roles } = useAuth();
@@ -75,31 +79,80 @@ export function Sidebar() {
   // Get role labels for display
   const roleLabels = roles.map(role => ROLE_PERMISSIONS[role].label);
 
+  // If used inside Sheet, render without fixed positioning
+  if (isMobileSheet) {
+    return (
+      <div className="flex flex-col h-full bg-sidebar">
+        {/* Logo */}
+        <div className="p-6 border-b border-sidebar-border">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Wine className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-display text-xl font-semibold gradient-text">Deja-Vu</h1>
+              <p className="text-xs text-muted-foreground">Club & Lounge</p>
+            </div>
+          </Link>
+        </div>
+
+        {/* User info */}
+        {currentStaff && (
+          <div className="px-4 py-3 border-b border-sidebar-border bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm truncate">{currentStaff.full_name}</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {roleLabels.map((label, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {visibleNavItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3.5 rounded-xl text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-secondary/50 touch-manipulation",
+                  isActive && "bg-primary/10 text-primary border-l-2 border-primary"
+                )}
+              >
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-destructive h-12"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-5 h-5 mr-2" />
+            Cerrar Sesión
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </Button>
-
-      {/* Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={cn(
-        "fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-40 transition-transform duration-300 lg:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      {/* Sidebar - Desktop only now */}
+      <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-40 hidden lg:block">
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
