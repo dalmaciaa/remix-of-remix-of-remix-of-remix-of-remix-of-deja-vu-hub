@@ -663,37 +663,46 @@ export type Database = {
       }
       sales: {
         Row: {
+          cash_amount: number | null
           concept: string | null
           created_at: string
           id: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
+          qr_amount: number | null
           staff_id: string | null
           staff_name: string | null
           table_number: string | null
           total_amount: number
+          transfer_amount: number | null
         }
         Insert: {
+          cash_amount?: number | null
           concept?: string | null
           created_at?: string
           id?: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          qr_amount?: number | null
           staff_id?: string | null
           staff_name?: string | null
           table_number?: string | null
           total_amount?: number
+          transfer_amount?: number | null
         }
         Update: {
+          cash_amount?: number | null
           concept?: string | null
           created_at?: string
           id?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          qr_amount?: number | null
           staff_id?: string | null
           staff_name?: string | null
           table_number?: string | null
           total_amount?: number
+          transfer_amount?: number | null
         }
         Relationships: [
           {

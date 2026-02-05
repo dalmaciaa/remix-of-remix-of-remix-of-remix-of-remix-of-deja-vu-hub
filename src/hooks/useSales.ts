@@ -16,6 +16,9 @@ export interface SaleWithStatus extends Sale {
   staffId: string | null;
   staffName: string | null;
   tableNumber: string | null;
+  cashAmount: number;
+  transferAmount: number;
+  qrAmount: number;
 }
 
 // Transform database rows to Sale type
@@ -36,6 +39,9 @@ const toSale = (saleRow: any, itemRows: any[]): SaleWithStatus => ({
   staffId: saleRow.staff_id || null,
   staffName: saleRow.staff_name || null,
   tableNumber: saleRow.table_number || null,
+  cashAmount: Number(saleRow.cash_amount) || 0,
+  transferAmount: Number(saleRow.transfer_amount) || 0,
+  qrAmount: Number(saleRow.qr_amount) || 0,
 });
 
 export function useSales() {
@@ -416,6 +422,12 @@ export function useAddSale() {
   });
 }
 
+export interface SplitPaymentAmounts {
+  cashAmount?: number;
+  transferAmount?: number;
+  qrAmount?: number;
+}
+
 export function useUpdatePaymentStatus() {
   const queryClient = useQueryClient();
 
@@ -423,14 +435,34 @@ export function useUpdatePaymentStatus() {
     mutationFn: async ({ 
       saleId, 
       paymentStatus, 
-      paymentMethod 
+      paymentMethod,
+      splitAmounts,
     }: { 
       saleId: string; 
       paymentStatus: PaymentStatus;
       paymentMethod?: PaymentMethod;
+      splitAmounts?: SplitPaymentAmounts;
     }) => {
       const updateData: any = { payment_status: paymentStatus };
-      if (paymentMethod) {
+      
+      if (splitAmounts) {
+        // Split payment - determine primary method based on highest amount
+        const amounts = {
+          cash: splitAmounts.cashAmount || 0,
+          transfer: splitAmounts.transferAmount || 0,
+          qr: splitAmounts.qrAmount || 0,
+        };
+        
+        // Set the primary payment method to the one with the highest amount
+        const maxMethod = Object.entries(amounts).reduce((a, b) => 
+          a[1] > b[1] ? a : b
+        )[0] as PaymentMethod;
+        
+        updateData.payment_method = maxMethod;
+        updateData.cash_amount = amounts.cash;
+        updateData.transfer_amount = amounts.transfer;
+        updateData.qr_amount = amounts.qr;
+      } else if (paymentMethod) {
         updateData.payment_method = paymentMethod;
       }
 
