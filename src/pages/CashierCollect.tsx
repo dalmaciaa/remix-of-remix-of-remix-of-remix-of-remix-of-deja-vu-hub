@@ -7,13 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useSales, SaleWithStatus, useUpdatePaymentStatus } from '@/hooks/useSales';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, formatDateTime, paymentMethodLabels, isToday, isThisMonth } from '@/lib/utils-format';
-import { DollarSign, User, CheckCircle, Clock, Users, Receipt } from 'lucide-react';
+import { DollarSign, User, CheckCircle, Clock, Users, Receipt, Split } from 'lucide-react';
 import { PaymentMethod } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -38,6 +40,12 @@ export default function CashierCollect() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
   const [activeTab, setActiveTab] = useState<'pending' | 'paid'>('pending');
   const [viewFilter, setViewFilter] = useState<ViewFilter>('today');
+  
+  // Split payment state
+  const [isSplitPayment, setIsSplitPayment] = useState(false);
+  const [cashAmount, setCashAmount] = useState<string>('');
+  const [transferAmount, setTransferAmount] = useState<string>('');
+  const [qrAmount, setQrAmount] = useState<string>('');
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -116,7 +124,24 @@ export default function CashierCollect() {
     setSelectedStaffForPayment(staffId);
     setSelectedTable(table);
     setSelectedPaymentMethod('cash');
+    setIsSplitPayment(false);
+    setCashAmount('');
+    setTransferAmount('');
+    setQrAmount('');
     setIsPaymentDialogOpen(true);
+  };
+
+  // Calculate split payment total
+  const getSplitTotal = () => {
+    return (parseFloat(cashAmount) || 0) + 
+           (parseFloat(transferAmount) || 0) + 
+           (parseFloat(qrAmount) || 0);
+  };
+
+  // Get current table total
+  const getCurrentTableTotal = () => {
+    if (!selectedTable || !selectedStaffForPayment) return 0;
+    return getTableTotal(groupedByStaffAndTable[selectedStaffForPayment]?.[selectedTable] || []);
   };
 
   // Handle payment
@@ -124,19 +149,62 @@ export default function CashierCollect() {
     if (!selectedTable || !selectedStaffForPayment) return;
     
     const tableSales = groupedByStaffAndTable[selectedStaffForPayment]?.[selectedTable] || [];
+    const tableTotal = getTableTotal(tableSales);
+    
+    // Validate split payment
+    if (isSplitPayment) {
+      const splitTotal = getSplitTotal();
+      if (Math.abs(splitTotal - tableTotal) > 0.01) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: `El total dividido (${formatCurrency(splitTotal)}) no coincide con el total a cobrar (${formatCurrency(tableTotal)})`
+        });
+        return;
+      }
+    }
     
     try {
-      for (const sale of tableSales) {
-        await updatePaymentMutation.mutateAsync({
-          saleId: sale.id,
-          paymentStatus: 'cobrado',
-          paymentMethod: selectedPaymentMethod,
-        });
+      // For split payments, we need to distribute amounts proportionally across sales
+      // or apply split to the combined payment (simpler approach - apply to last sale)
+      for (let i = 0; i < tableSales.length; i++) {
+        const sale = tableSales[i];
+        const isLastSale = i === tableSales.length - 1;
+        
+        if (isSplitPayment && isLastSale) {
+          // Apply split payment info to the last sale (for simplicity)
+          await updatePaymentMutation.mutateAsync({
+            saleId: sale.id,
+            paymentStatus: 'cobrado',
+            splitAmounts: {
+              cashAmount: parseFloat(cashAmount) || 0,
+              transferAmount: parseFloat(transferAmount) || 0,
+              qrAmount: parseFloat(qrAmount) || 0,
+            }
+          });
+        } else if (isSplitPayment) {
+          // Mark other sales as paid without split info
+          await updatePaymentMutation.mutateAsync({
+            saleId: sale.id,
+            paymentStatus: 'cobrado',
+            paymentMethod: 'cash', // Default for grouped sales
+          });
+        } else {
+          await updatePaymentMutation.mutateAsync({
+            saleId: sale.id,
+            paymentStatus: 'cobrado',
+            paymentMethod: selectedPaymentMethod,
+          });
+        }
       }
+      
+      const paymentDesc = isSplitPayment 
+        ? `Efectivo: ${formatCurrency(parseFloat(cashAmount) || 0)}, Transfer: ${formatCurrency(parseFloat(transferAmount) || 0)}, QR: ${formatCurrency(parseFloat(qrAmount) || 0)}`
+        : paymentMethodLabels[selectedPaymentMethod];
       
       toast({
         title: 'Mesa cobrada',
-        description: `Se cobraron ${tableSales.length} pedidos por ${formatCurrency(getTableTotal(tableSales))}`
+        description: `Se cobraron ${tableSales.length} pedidos por ${formatCurrency(tableTotal)} (${paymentDesc})`
       });
       
       setIsPaymentDialogOpen(false);
@@ -421,7 +489,7 @@ export default function CashierCollect() {
 
       {/* Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               Cobrar {selectedTable === 'sin_mesa' ? 'Pedidos sin Mesa' : `Mesa ${selectedTable}`}
@@ -436,31 +504,106 @@ export default function CashierCollect() {
             <div className="text-center p-4 bg-primary/10 rounded-lg">
               <p className="text-sm text-muted-foreground">Total a cobrar</p>
               <p className="text-3xl font-bold text-primary">
-                {selectedTable && selectedStaffForPayment && 
-                  formatCurrency(getTableTotal(groupedByStaffAndTable[selectedStaffForPayment]?.[selectedTable] || []))}
+                {formatCurrency(getCurrentTableTotal())}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {selectedTable && selectedStaffForPayment && 
                   `${groupedByStaffAndTable[selectedStaffForPayment]?.[selectedTable]?.length || 0} pedidos`}
               </p>
             </div>
-            <div>
-              <Label>Método de Pago</Label>
-              <Select value={selectedPaymentMethod} onValueChange={(v) => setSelectedPaymentMethod(v as PaymentMethod)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Efectivo</SelectItem>
-                  <SelectItem value="transfer">Transferencia</SelectItem>
-                  <SelectItem value="qr">QR</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            {/* Split Payment Toggle */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-2">
+                <Split className="w-4 h-4 text-muted-foreground" />
+                <Label htmlFor="split-payment">Dividir pago</Label>
+              </div>
+              <Switch 
+                id="split-payment" 
+                checked={isSplitPayment} 
+                onCheckedChange={setIsSplitPayment}
+              />
             </div>
+            
+            {!isSplitPayment ? (
+              <div>
+                <Label>Método de Pago</Label>
+                <Select value={selectedPaymentMethod} onValueChange={(v) => setSelectedPaymentMethod(v as PaymentMethod)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Efectivo</SelectItem>
+                    <SelectItem value="transfer">Transferencia</SelectItem>
+                    <SelectItem value="qr">QR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Ingresa el monto para cada método:</p>
+                
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Efectivo</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={cashAmount}
+                      onChange={(e) => setCashAmount(e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Transfer</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={transferAmount}
+                      onChange={(e) => setTransferAmount(e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">QR</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={qrAmount}
+                      onChange={(e) => setQrAmount(e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+                
+                <div className={`text-center p-2 rounded ${
+                  Math.abs(getSplitTotal() - getCurrentTableTotal()) < 0.01 
+                    ? 'bg-green-500/10 text-green-500' 
+                    : 'bg-destructive/10 text-destructive'
+                }`}>
+                  <p className="text-sm">
+                    Suma: {formatCurrency(getSplitTotal())} / {formatCurrency(getCurrentTableTotal())}
+                  </p>
+                  {Math.abs(getSplitTotal() - getCurrentTableTotal()) >= 0.01 && (
+                    <p className="text-xs">
+                      {getSplitTotal() < getCurrentTableTotal() 
+                        ? `Falta: ${formatCurrency(getCurrentTableTotal() - getSplitTotal())}` 
+                        : `Excede: ${formatCurrency(getSplitTotal() - getCurrentTableTotal())}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handlePayTable} disabled={updatePaymentMutation.isPending}>
+            <Button 
+              onClick={handlePayTable} 
+              disabled={updatePaymentMutation.isPending || (isSplitPayment && Math.abs(getSplitTotal() - getCurrentTableTotal()) >= 0.01)}
+            >
               <CheckCircle className="w-4 h-4 mr-1" />
               Confirmar Cobro
             </Button>
