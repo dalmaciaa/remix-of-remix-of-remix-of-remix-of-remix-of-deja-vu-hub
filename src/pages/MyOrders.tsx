@@ -107,30 +107,34 @@ export default function MyOrders() {
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="pending" className="gap-2">
-            <Clock className="w-4 h-4" />
-            Pendientes
-            {Object.keys(unpaidByTable).length > 0 && (
-              <Badge variant="destructive" className="ml-1">{Object.keys(unpaidByTable).length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
-            <ClipboardList className="w-4 h-4" />
-            Hoy
-          </TabsTrigger>
-          <TabsTrigger value="stats" className="gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Mi Desempeño
-          </TabsTrigger>
-          <TabsTrigger value="stock" className="gap-2">
-            <Package className="w-4 h-4" />
-            Stock
-            {lowStockProducts.length > 0 && (
-              <Badge variant="destructive" className="ml-1">{lowStockProducts.length}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-3 px-3 pb-2 mb-4">
+          <TabsList className="inline-flex w-auto min-w-full sm:w-full h-auto p-1 gap-1">
+            <TabsTrigger value="pending" className="flex-1 sm:flex-initial gap-2 py-3 px-4 text-sm touch-manipulation">
+              <Clock className="w-4 h-4" />
+              <span className="hidden xs:inline">Pendientes</span>
+              <span className="xs:hidden">Pend.</span>
+              {Object.keys(unpaidByTable).length > 0 && (
+                <Badge variant="destructive" className="ml-1">{Object.keys(unpaidByTable).length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 sm:flex-initial gap-2 py-3 px-4 text-sm touch-manipulation">
+              <ClipboardList className="w-4 h-4" />
+              Hoy
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex-1 sm:flex-initial gap-2 py-3 px-4 text-sm touch-manipulation">
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Mi Desempeño</span>
+              <span className="sm:hidden">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger value="stock" className="flex-1 sm:flex-initial gap-2 py-3 px-4 text-sm touch-manipulation">
+              <Package className="w-4 h-4" />
+              Stock
+              {lowStockProducts.length > 0 && (
+                <Badge variant="destructive" className="ml-1">{lowStockProducts.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Pending Orders by Table - SOLO VISUALIZACIÓN, NO COBRO */}
         <TabsContent value="pending">
