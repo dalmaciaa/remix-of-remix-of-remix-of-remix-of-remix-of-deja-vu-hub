@@ -5,7 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Wine, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Wine, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -134,8 +145,28 @@ export default function Bartender() {
     }
   };
 
+  const canCancelOrder = (order: BartenderOrder): boolean => {
+    if (isAdminRole) return true;
+    if (isBartenderRole) return true;
+    if (isMozoRole && order.staff_id === currentStaff?.id) return true;
+    return false;
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    try {
+      await supabase.from('bartender_order_items').delete().eq('bartender_order_id', orderId);
+      const { error } = await supabase.from('bartender_orders').delete().eq('id', orderId);
+      if (error) throw error;
+
+      toast({ title: 'Pedido cancelado', description: 'El pedido fue cancelado correctamente' });
+      fetchOrders();
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cancelar el pedido' });
+    }
+  };
+
   const canMarkAsDelivered = (order: BartenderOrder): boolean => {
-    // Solo el mozo que hizo el pedido puede marcarlo como entregado
     if (isAdminRole) return true;
     if (!isMozoRole) return false;
     return order.staff_id === currentStaff?.id;
@@ -230,6 +261,29 @@ export default function Bartender() {
                       Comenzar Preparación
                     </Button>
                   )}
+                  {canCancelOrder(order) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="w-full mt-2 text-destructive hover:text-destructive">
+                          <XCircle className="w-4 h-4 mr-2" /> Cancelar Pedido
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Cancelar este pedido?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción eliminará el pedido de {order.table_number ? `Mesa ${order.table_number}` : 'sin mesa'}. No se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Volver</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => cancelOrder(order.id)} className="bg-destructive hover:bg-destructive/90">
+                            Sí, cancelar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -274,6 +328,29 @@ export default function Bartender() {
                       <CheckCircle className="w-5 h-5 mr-2" />
                       Marcar como Listo
                     </Button>
+                  )}
+                  {canCancelOrder(order) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="w-full mt-2 text-destructive hover:text-destructive">
+                          <XCircle className="w-4 h-4 mr-2" /> Cancelar Pedido
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Cancelar este pedido?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción eliminará el pedido de {order.table_number ? `Mesa ${order.table_number}` : 'sin mesa'}. No se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Volver</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => cancelOrder(order.id)} className="bg-destructive hover:bg-destructive/90">
+                            Sí, cancelar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </CardContent>
               </Card>
@@ -324,6 +401,29 @@ export default function Bartender() {
                     <p className="text-sm text-muted-foreground text-center py-2">
                       Solo {order.staff_name} puede marcar como entregado
                     </p>
+                  )}
+                  {canCancelOrder(order) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="w-full mt-2 text-destructive hover:text-destructive">
+                          <XCircle className="w-4 h-4 mr-2" /> Cancelar Pedido
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Cancelar este pedido?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción eliminará el pedido de {order.table_number ? `Mesa ${order.table_number}` : 'sin mesa'}. No se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Volver</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => cancelOrder(order.id)} className="bg-destructive hover:bg-destructive/90">
+                            Sí, cancelar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </CardContent>
               </Card>
