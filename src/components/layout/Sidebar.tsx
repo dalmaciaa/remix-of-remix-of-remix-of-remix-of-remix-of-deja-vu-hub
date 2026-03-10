@@ -102,6 +102,21 @@ const allNavItems: NavItem[] = [{
   path: '/admin-assistant',
   label: 'Asistente IA',
   icon: Bot
+}, {
+  id: 'ticket-create',
+  path: '/ticket-create',
+  label: 'Crear Entradas',
+  icon: TicketPlus
+}, {
+  id: 'ticket-verify',
+  path: '/ticket-verify',
+  label: 'Verificar Entradas',
+  icon: ScanLine
+}, {
+  id: 'ticket-admin',
+  path: '/ticket-admin',
+  label: 'Admin Entradas',
+  icon: TicketCheck
 }];
 export function Sidebar() {
   const location = useLocation();
