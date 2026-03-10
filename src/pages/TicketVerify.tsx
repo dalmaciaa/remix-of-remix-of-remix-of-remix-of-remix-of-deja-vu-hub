@@ -16,7 +16,7 @@ export default function TicketVerify() {
   const { currentStaff } = useAuth();
   const verifyTicket = useVerifyTicket();
   const [manualCode, setManualCode] = useState('');
-  const [result, setResult] = useState<{ valid: boolean; reason: string; ticket: Ticket | null } | null>(null);
+  const [result, setResult] = useState<{ valid: boolean; reason: string; ticket: any } | null>(null);
   const [mode, setMode] = useState<'scan' | 'manual'>('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [scanning, setScanning] = useState(false);
