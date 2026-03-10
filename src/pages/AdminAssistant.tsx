@@ -198,7 +198,7 @@ export default function AdminAssistant() {
 
   return (
     <Layout>
-      <PageHeader title="Asistente IA" subtitle="Consulta datos, analiza inventario y obtén ayuda inteligente" />
+      <PageHeader title="Asistente IA" description="Consulta datos, analiza inventario y obtén ayuda inteligente" />
 
       <div className="flex flex-col h-[calc(100vh-12rem)] bg-card rounded-xl border border-border overflow-hidden">
         {/* Messages */}

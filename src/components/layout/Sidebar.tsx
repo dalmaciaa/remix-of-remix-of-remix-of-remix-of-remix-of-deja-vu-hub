@@ -97,6 +97,11 @@ const allNavItems: NavItem[] = [{
   path: '/purchase-history',
   label: 'Historial Compras',
   icon: ShoppingBasket
+}, {
+  id: 'admin-assistant',
+  path: '/admin-assistant',
+  label: 'Asistente IA',
+  icon: Bot
 }];
 export function Sidebar() {
   const location = useLocation();
