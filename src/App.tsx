@@ -21,6 +21,7 @@ import StaffHistory from "./pages/StaffHistory";
 import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
 import PurchaseHistory from "./pages/PurchaseHistory";
+import AdminAssistant from "./pages/AdminAssistant";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
