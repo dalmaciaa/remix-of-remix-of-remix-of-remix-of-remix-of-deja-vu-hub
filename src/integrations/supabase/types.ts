@@ -835,6 +835,114 @@ export type Database = {
           },
         ]
       }
+      ticket_events: {
+        Row: {
+          created_at: string
+          default_price: number
+          description: string | null
+          event_date: string
+          id: string
+          is_active: boolean
+          max_capacity: number | null
+          name: string
+          updated_at: string
+          valid_from: string
+          valid_until: string
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_price?: number
+          description?: string | null
+          event_date: string
+          id?: string
+          is_active?: boolean
+          max_capacity?: number | null
+          name: string
+          updated_at?: string
+          valid_from: string
+          valid_until: string
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_price?: number
+          description?: string | null
+          event_date?: string
+          id?: string
+          is_active?: boolean
+          max_capacity?: number | null
+          name?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      tickets: {
+        Row: {
+          created_at: string
+          holder_dni: string | null
+          holder_email: string | null
+          holder_name: string
+          holder_phone: string | null
+          id: string
+          notes: string | null
+          price: number
+          status: string
+          ticket_code: string
+          ticket_event_id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          holder_dni?: string | null
+          holder_email?: string | null
+          holder_name: string
+          holder_phone?: string | null
+          id?: string
+          notes?: string | null
+          price?: number
+          status?: string
+          ticket_code: string
+          ticket_event_id: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          holder_dni?: string | null
+          holder_email?: string | null
+          holder_name?: string
+          holder_phone?: string | null
+          id?: string
+          notes?: string | null
+          price?: number
+          status?: string
+          ticket_code?: string
+          ticket_event_id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_ticket_event_id_fkey"
+            columns: ["ticket_event_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
