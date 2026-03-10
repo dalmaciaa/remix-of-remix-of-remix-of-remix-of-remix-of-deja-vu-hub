@@ -22,6 +22,9 @@ import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import AdminAssistant from "./pages/AdminAssistant";
+import TicketCreate from "./pages/TicketCreate";
+import TicketVerify from "./pages/TicketVerify";
+import TicketAdmin from "./pages/TicketAdmin";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
