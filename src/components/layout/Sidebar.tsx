@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Receipt, Menu, X, Wine, LogOut, PartyPopper, ChefHat, Users, UtensilsCrossed, Coffee, Bell, ClipboardList, History, Banknote, DollarSign, ShoppingBasket } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Receipt, Menu, X, Wine, LogOut, PartyPopper, ChefHat, Users, UtensilsCrossed, Coffee, Bell, ClipboardList, History, Banknote, DollarSign, ShoppingBasket, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
