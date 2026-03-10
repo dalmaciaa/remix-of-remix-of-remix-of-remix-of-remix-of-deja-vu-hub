@@ -106,7 +106,7 @@ const allNavItems: NavItem[] = [{
   id: 'ticket-create',
   path: '/ticket-create',
   label: 'Crear Entradas',
-  icon: TicketPlus
+  icon: Ticket
 }, {
   id: 'ticket-verify',
   path: '/ticket-verify',
