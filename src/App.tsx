@@ -22,6 +22,9 @@ import Staff from "./pages/Staff";
 import InternalConsumption from "./pages/InternalConsumption";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import AdminAssistant from "./pages/AdminAssistant";
+import TicketCreate from "./pages/TicketCreate";
+import TicketVerify from "./pages/TicketVerify";
+import TicketAdmin from "./pages/TicketAdmin";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +56,9 @@ const App = () => (
             <Route path="/internal-consumption" element={<ProtectedRoute><InternalConsumption /></ProtectedRoute>} />
             <Route path="/purchase-history" element={<ProtectedRoute><PurchaseHistory /></ProtectedRoute>} />
             <Route path="/admin-assistant" element={<ProtectedRoute><AdminAssistant /></ProtectedRoute>} />
+            <Route path="/ticket-create" element={<ProtectedRoute><TicketCreate /></ProtectedRoute>} />
+            <Route path="/ticket-verify" element={<ProtectedRoute><TicketVerify /></ProtectedRoute>} />
+            <Route path="/ticket-admin" element={<ProtectedRoute><TicketAdmin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

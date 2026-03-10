@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Receipt, Menu, X, Wine, LogOut, PartyPopper, ChefHat, Users, UtensilsCrossed, Coffee, Bell, ClipboardList, History, Banknote, DollarSign, ShoppingBasket, Bot } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Receipt, Menu, X, Wine, LogOut, PartyPopper, ChefHat, Users, UtensilsCrossed, Coffee, Bell, ClipboardList, History, Banknote, DollarSign, ShoppingBasket, Bot, Ticket, ScanLine, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,21 @@ const allNavItems: NavItem[] = [{
   path: '/admin-assistant',
   label: 'Asistente IA',
   icon: Bot
+}, {
+  id: 'ticket-create',
+  path: '/ticket-create',
+  label: 'Crear Entradas',
+  icon: Ticket
+}, {
+  id: 'ticket-verify',
+  path: '/ticket-verify',
+  label: 'Verificar Entradas',
+  icon: ScanLine
+}, {
+  id: 'ticket-admin',
+  path: '/ticket-admin',
+  label: 'Admin Entradas',
+  icon: ListChecks
 }];
 export function Sidebar() {
   const location = useLocation();
