@@ -116,7 +116,7 @@ const allNavItems: NavItem[] = [{
   id: 'ticket-admin',
   path: '/ticket-admin',
   label: 'Admin Entradas',
-  icon: TicketCheck
+  icon: ListChecks
 }];
 export function Sidebar() {
   const location = useLocation();
