@@ -68,7 +68,7 @@ export default function TicketAdmin() {
 
   return (
     <Layout>
-      <PageHeader title="Administrar Entradas" subtitle="Gestiona eventos y controla el estado de las entradas" />
+      <PageHeader title="Administrar Entradas" description="Gestiona eventos y controla el estado de las entradas" />
 
       <div className="space-y-4">
         {/* Event selector */}

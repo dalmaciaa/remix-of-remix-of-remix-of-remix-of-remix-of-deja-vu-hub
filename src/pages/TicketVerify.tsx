@@ -89,7 +89,7 @@ export default function TicketVerify() {
 
   return (
     <Layout>
-      <PageHeader title="Verificar Entradas" subtitle="Escanea el QR o ingresa el código manualmente" />
+      <PageHeader title="Verificar Entradas" description="Escanea el QR o ingresa el código manualmente" />
 
       <div className="max-w-lg mx-auto space-y-4">
         {/* Mode toggle */}

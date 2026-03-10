@@ -87,7 +87,7 @@ export default function TicketCreate() {
 
   return (
     <Layout>
-      <PageHeader title="Crear Entradas" subtitle="Genera entradas digitales con QR para tus eventos" />
+      <PageHeader title="Crear Entradas" description="Genera entradas digitales con QR para tus eventos" />
 
       <Tabs defaultValue="events" className="space-y-4">
         <TabsList>
