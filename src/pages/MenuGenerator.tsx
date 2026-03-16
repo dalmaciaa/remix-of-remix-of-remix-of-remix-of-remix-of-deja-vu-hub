@@ -287,7 +287,7 @@ export default function MenuGenerator() {
 
   return (
     <Layout>
-      <PageHeader title="Generador de Menú" subtitle="Generá una imagen del menú con todos los productos de venta y sus precios" />
+      <PageHeader title="Generador de Menú" description="Generá una imagen del menú con todos los productos de venta y sus precios" />
 
       <div className="space-y-6">
         {/* Stats */}
