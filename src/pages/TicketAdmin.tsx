@@ -160,6 +160,7 @@ export default function TicketAdmin() {
                       <TableHead>Precio</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Usado</TableHead>
+                      <TableHead>Flyer</TableHead>
                       <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
