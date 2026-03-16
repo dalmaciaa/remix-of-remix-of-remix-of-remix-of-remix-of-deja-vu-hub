@@ -117,6 +117,11 @@ const allNavItems: NavItem[] = [{
   path: '/ticket-admin',
   label: 'Admin Entradas',
   icon: ListChecks
+}, {
+  id: 'menu-generator',
+  path: '/menu-generator',
+  label: 'Generar Menú',
+  icon: FileImage
 }];
 export function Sidebar() {
   const location = useLocation();
