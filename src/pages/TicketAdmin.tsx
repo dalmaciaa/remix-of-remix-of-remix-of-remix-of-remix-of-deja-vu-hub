@@ -186,6 +186,9 @@ export default function TicketAdmin() {
                           {ticket.used_at ? format(new Date(ticket.used_at), "dd/MM HH:mm") : '—'}
                         </TableCell>
                         <TableCell>
+                          {selectedEvent && <TicketFlyer ticket={ticket} event={selectedEvent} />}
+                        </TableCell>
+                        <TableCell>
                           {ticket.status === 'valid' && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
