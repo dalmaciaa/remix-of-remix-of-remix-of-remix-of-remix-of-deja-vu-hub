@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTicketEvents, useTickets, useCreateTicketEvent, useCreateTickets, type TicketEvent } from '@/hooks/useTickets';
-import { Plus, Ticket, Calendar, QrCode, Download } from 'lucide-react';
+import { Plus, Ticket, Calendar, QrCode } from 'lucide-react';
+import { TicketFlyer } from '@/components/tickets/TicketFlyer';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
