@@ -25,6 +25,7 @@ import AdminAssistant from "./pages/AdminAssistant";
 import TicketCreate from "./pages/TicketCreate";
 import TicketVerify from "./pages/TicketVerify";
 import TicketAdmin from "./pages/TicketAdmin";
+import MenuGenerator from "./pages/MenuGenerator";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
