@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useTicketEvents, useTickets, useCancelTicket, useUpdateTicketEvent, type Ticket } from '@/hooks/useTickets';
 import { Ticket as TicketIcon, Users, CheckCircle2, XCircle, Clock, Ban, ToggleLeft, ToggleRight } from 'lucide-react';
+import { TicketFlyer } from '@/components/tickets/TicketFlyer';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
