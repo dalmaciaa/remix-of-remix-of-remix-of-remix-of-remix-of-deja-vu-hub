@@ -25,6 +25,7 @@ import AdminAssistant from "./pages/AdminAssistant";
 import TicketCreate from "./pages/TicketCreate";
 import TicketVerify from "./pages/TicketVerify";
 import TicketAdmin from "./pages/TicketAdmin";
+import MenuGenerator from "./pages/MenuGenerator";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/ticket-create" element={<ProtectedRoute><TicketCreate /></ProtectedRoute>} />
             <Route path="/ticket-verify" element={<ProtectedRoute><TicketVerify /></ProtectedRoute>} />
             <Route path="/ticket-admin" element={<ProtectedRoute><TicketAdmin /></ProtectedRoute>} />
+            <Route path="/menu-generator" element={<ProtectedRoute><MenuGenerator /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
