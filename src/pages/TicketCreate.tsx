@@ -263,6 +263,7 @@ export default function TicketCreate() {
                       <TableHead>Precio</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>QR</TableHead>
+                      <TableHead>Flyer</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -291,6 +292,11 @@ export default function TicketCreate() {
                           <a href={generateQRDataUrl(ticket.ticket_code)} target="_blank" rel="noopener noreferrer">
                             <QrCode className="w-5 h-5 text-primary hover:text-primary/70" />
                           </a>
+                        </TableCell>
+                        <TableCell>
+                          {selectedEvent && (
+                            <TicketFlyer ticket={ticket} event={selectedEvent} />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
