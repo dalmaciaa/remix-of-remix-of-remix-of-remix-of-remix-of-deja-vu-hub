@@ -16,10 +16,7 @@ export function StaffRanking() {
   const { data: sales = [] } = useSales();
 
   const todayRanking = useMemo<StaffSales[]>(() => {
-    // Filter today's sales
     const todaySales = sales.filter(s => isToday(new Date(s.createdAt)));
-
-    // Group by staff
     const staffMap = new Map<string, StaffSales>();
 
     todaySales.forEach(sale => {
@@ -33,74 +30,35 @@ export function StaffRanking() {
         existing.salesCount += 1;
         existing.itemsSold += itemsSold;
       } else {
-        staffMap.set(staffKey, {
-          staffId,
-          staffName: staffKey,
-          totalSales: sale.totalAmount,
-          salesCount: 1,
-          itemsSold,
-        });
+        staffMap.set(staffKey, { staffId, staffName: staffKey, totalSales: sale.totalAmount, salesCount: 1, itemsSold });
       }
     });
 
-    // Sort by total sales descending
-    return Array.from(staffMap.values())
-      .sort((a, b) => b.totalSales - a.totalSales);
+    return Array.from(staffMap.values()).sort((a, b) => b.totalSales - a.totalSales);
   }, [sales]);
 
   const getRankIcon = (index: number) => {
     switch (index) {
-      case 0:
-        return <Trophy className="w-6 h-6 text-yellow-500" />;
-      case 1:
-        return <Medal className="w-5 h-5 text-gray-400" />;
-      case 2:
-        return <Award className="w-5 h-5 text-amber-600" />;
-      default:
-        return <User className="w-4 h-4 text-muted-foreground" />;
-    }
-  };
-
-  const getRankStyles = (index: number) => {
-    switch (index) {
-      case 0:
-        return {
-          bg: 'bg-gradient-to-r from-yellow-500/30 via-yellow-500/20 to-transparent',
-          border: 'border-l-4 border-l-yellow-500',
-          nameSize: 'text-lg',
-        };
-      case 1:
-        return {
-          bg: 'bg-gradient-to-r from-gray-400/25 via-gray-400/15 to-transparent',
-          border: 'border-l-4 border-l-gray-400',
-          nameSize: 'text-base',
-        };
-      case 2:
-        return {
-          bg: 'bg-gradient-to-r from-amber-600/25 via-amber-600/15 to-transparent',
-          border: 'border-l-4 border-l-amber-600',
-          nameSize: 'text-base',
-        };
-      default:
-        return {
-          bg: 'bg-secondary/50',
-          border: '',
-          nameSize: 'text-sm',
-        };
+      case 0: return <Trophy className="w-6 h-6 text-warning" />;
+      case 1: return <Medal className="w-5 h-5 text-muted-foreground" />;
+      case 2: return <Award className="w-5 h-5 text-accent" />;
+      default: return <User className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
   if (todayRanking.length === 0) {
     return (
-      <div className="glass-card p-6 animate-fade-in">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-primary/20">
-            <Trophy className="w-5 h-5 text-primary" />
+      <div className="rounded-xl border border-border/50 bg-card/90 backdrop-blur-sm p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2.5 rounded-xl bg-warning/15">
+            <Trophy className="w-5 h-5 text-warning" />
           </div>
           <h3 className="font-display text-lg font-semibold">Ranking del Día</h3>
         </div>
-        <div className="text-center py-6">
-          <Trophy className="w-12 h-12 mx-auto text-muted-foreground/30 mb-2" />
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto rounded-full bg-muted/50 flex items-center justify-center mb-3">
+            <Trophy className="w-8 h-8 text-muted-foreground/30" />
+          </div>
           <p className="text-muted-foreground text-sm">Sin ventas registradas hoy</p>
         </div>
       </div>
@@ -110,45 +68,56 @@ export function StaffRanking() {
   const totalDaySales = todayRanking.reduce((sum, s) => sum + s.totalSales, 0);
 
   return (
-    <div className="glass-card p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-xl border border-border/50 bg-card/90 backdrop-blur-sm p-6">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/20">
-            <Trophy className="w-5 h-5 text-primary" />
+          <div className="p-2.5 rounded-xl bg-warning/15">
+            <Trophy className="w-5 h-5 text-warning" />
           </div>
           <div>
             <h3 className="font-display text-lg font-semibold">Ranking del Día</h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Total: {formatCurrency(totalDaySales)}
             </p>
           </div>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         {todayRanking.map((staff, index) => {
-          const styles = getRankStyles(index);
-          const percentage = totalDaySales > 0 
-            ? Math.round((staff.totalSales / totalDaySales) * 100) 
-            : 0;
-          
+          const percentage = totalDaySales > 0 ? Math.round((staff.totalSales / totalDaySales) * 100) : 0;
+
           return (
             <div
               key={staff.staffName}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-lg transition-all",
-                styles.bg,
-                styles.border
+                "relative flex items-center gap-3 p-3 rounded-xl transition-all overflow-hidden",
+                index === 0
+                  ? "bg-warning/10 border border-warning/20"
+                  : index === 1
+                  ? "bg-muted/60 border border-border/30"
+                  : index === 2
+                  ? "bg-accent/10 border border-accent/20"
+                  : "bg-secondary/30"
               )}
             >
-              <div className="flex items-center justify-center w-10">
+              {/* Progress bar background */}
+              <div
+                className={cn(
+                  "absolute inset-y-0 left-0 opacity-10 rounded-xl",
+                  index === 0 ? "bg-warning" : index === 1 ? "bg-muted-foreground" : "bg-accent"
+                )}
+                style={{ width: `${percentage}%` }}
+              />
+
+              <div className="relative flex items-center justify-center w-10">
                 {getRankIcon(index)}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className={cn("font-semibold truncate", styles.nameSize)}>
+              <div className="relative flex-1 min-w-0">
+                <p className={cn("font-semibold truncate", index === 0 ? "text-base" : "text-sm")}>
                   {staff.staffName}
                 </p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                   <span className="flex items-center gap-1">
                     <ShoppingBag className="w-3 h-3" />
                     {staff.salesCount} venta{staff.salesCount !== 1 ? 's' : ''}
@@ -157,11 +126,8 @@ export function StaffRanking() {
                   <span className="text-primary font-medium">{percentage}%</span>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={cn(
-                  "font-bold text-primary",
-                  index === 0 ? "text-xl" : "text-lg"
-                )}>
+              <div className="relative text-right">
+                <p className={cn("font-bold text-primary", index === 0 ? "text-xl" : "text-base")}>
                   {formatCurrency(staff.totalSales)}
                 </p>
               </div>
