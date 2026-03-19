@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { useSales } from '@/hooks/useSales';
 import { useProducts } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/utils-format';
-import { Wine, Coffee, UtensilsCrossed, Star } from 'lucide-react';
+import { Wine, Coffee, UtensilsCrossed, Star, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 
 interface TopProductData {
   productId: string;
@@ -29,42 +29,29 @@ export function TopProducts({ dateFilter = 'today', startDate, endDate }: TopPro
   const getDateRange = (filter: DateFilter) => {
     const now = new Date();
     switch (filter) {
-      case 'today':
-        return { start: startOfDay(now), end: endOfDay(now) };
-      case 'week':
-        return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
-      case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'all':
-        return null;
+      case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+      case 'week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+      case 'month': return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'all': return null;
     }
   };
 
   const topProducts = useMemo(() => {
     let filteredSales = sales;
-
-    // Apply date filter
     if (startDate && endDate) {
-      filteredSales = sales.filter(s => 
-        isWithinInterval(new Date(s.createdAt), { start: startDate, end: endDate })
-      );
+      filteredSales = sales.filter(s => isWithinInterval(new Date(s.createdAt), { start: startDate, end: endDate }));
     } else {
       const range = getDateRange(dateFilter);
       if (range) {
-        filteredSales = sales.filter(s => 
-          isWithinInterval(new Date(s.createdAt), range)
-        );
+        filteredSales = sales.filter(s => isWithinInterval(new Date(s.createdAt), range));
       }
     }
 
-    // Aggregate by product
     const productMap = new Map<string, TopProductData>();
-
     filteredSales.forEach(sale => {
       sale.items.forEach(item => {
         const key = item.productId || item.productName;
         const product = products.find(p => p.id === item.productId);
-        
         if (productMap.has(key)) {
           const existing = productMap.get(key)!;
           existing.quantity += item.quantity;
@@ -81,75 +68,79 @@ export function TopProducts({ dateFilter = 'today', startDate, endDate }: TopPro
       });
     });
 
-    return Array.from(productMap.values())
-      .sort((a, b) => b.quantity - a.quantity);
+    return Array.from(productMap.values()).sort((a, b) => b.quantity - a.quantity);
   }, [sales, products, dateFilter, startDate, endDate]);
 
-  // Get top by category
   const topDrink = topProducts.find(p => p.category === 'drinks');
   const topCocktail = topProducts.find(p => p.category === 'cocktails');
   const topFood = topProducts.find(p => p.category === 'food');
   const topOverall = topProducts[0];
 
-  const renderTopItem = (
-    title: string, 
-    item: TopProductData | undefined, 
-    icon: React.ReactNode,
-    colorClass: string
-  ) => (
-    <div className={cn(
-      "p-4 rounded-xl border transition-all",
-      colorClass
-    )}>
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <span className="text-xs font-medium uppercase tracking-wide opacity-80">{title}</span>
-      </div>
-      {item ? (
-        <div>
-          <p className="font-semibold text-sm truncate">{item.productName}</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs opacity-70">{item.quantity} vendidos</span>
-            <span className="text-xs font-medium">{formatCurrency(item.revenue)}</span>
-          </div>
-        </div>
-      ) : (
-        <p className="text-xs opacity-60">Sin datos</p>
-      )}
-    </div>
-  );
+  const cards = [
+    {
+      title: 'Top General',
+      item: topOverall,
+      icon: <Star className="w-4 h-4" />,
+      accentClass: 'border-l-primary bg-primary/5',
+      iconBg: 'bg-primary/15 text-primary',
+    },
+    {
+      title: 'Top Bebida',
+      item: topDrink,
+      icon: <Wine className="w-4 h-4" />,
+      accentClass: 'border-l-chart-4 bg-chart-4/5',
+      iconBg: 'bg-chart-4/15 text-chart-4',
+    },
+    {
+      title: 'Top Cóctel',
+      item: topCocktail,
+      icon: <Coffee className="w-4 h-4" />,
+      accentClass: 'border-l-accent bg-accent/5',
+      iconBg: 'bg-accent/15 text-accent',
+    },
+    {
+      title: 'Top Comida',
+      item: topFood,
+      icon: <UtensilsCrossed className="w-4 h-4" />,
+      accentClass: 'border-l-warning bg-warning/5',
+      iconBg: 'bg-warning/15 text-warning',
+    },
+  ];
 
   return (
-    <div className="glass-card p-6 animate-fade-in">
+    <div className="rounded-xl border border-border/50 bg-card/90 backdrop-blur-sm p-6">
       <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
-        <Star className="w-5 h-5 text-primary" />
+        <div className="p-2 rounded-xl bg-primary/15">
+          <TrendingUp className="w-5 h-5 text-primary" />
+        </div>
         Más Vendidos
       </h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {renderTopItem(
-          'Top General', 
-          topOverall, 
-          <Star className="w-4 h-4" />,
-          'bg-primary/10 border-primary/20 text-foreground'
-        )}
-        {renderTopItem(
-          'Top Bebida', 
-          topDrink, 
-          <Wine className="w-4 h-4" />,
-          'bg-blue-500/10 border-blue-500/20 text-foreground'
-        )}
-        {renderTopItem(
-          'Top Cóctel', 
-          topCocktail, 
-          <Coffee className="w-4 h-4" />,
-          'bg-purple-500/10 border-purple-500/20 text-foreground'
-        )}
-        {renderTopItem(
-          'Top Comida', 
-          topFood, 
-          <UtensilsCrossed className="w-4 h-4" />,
-          'bg-orange-500/10 border-orange-500/20 text-foreground'
-        )}
+        {cards.map(({ title, item, icon, accentClass, iconBg }) => (
+          <div
+            key={title}
+            className={cn(
+              "p-4 rounded-xl border border-border/30 border-l-[3px] transition-all hover:shadow-md",
+              accentClass
+            )}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className={cn("p-1.5 rounded-lg", iconBg)}>{icon}</div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
+            </div>
+            {item ? (
+              <div>
+                <p className="font-semibold text-sm truncate">{item.productName}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-muted-foreground">{item.quantity} vendidos</span>
+                  <span className="text-xs font-bold text-primary">{formatCurrency(item.revenue)}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 mt-2">Sin datos</p>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
