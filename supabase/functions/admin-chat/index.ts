@@ -248,6 +248,37 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_sale",
+      description: "Crear una nueva venta con sus items. Busca productos por nombre para obtener precios y descuenta stock automáticamente.",
+      parameters: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                product_name: { type: "string", description: "Nombre del producto" },
+                quantity: { type: "number", description: "Cantidad vendida" },
+                unit_price: { type: "number", description: "Precio unitario (si no se provee, se usa el del producto)" },
+              },
+              required: ["product_name", "quantity"],
+            },
+            description: "Lista de productos vendidos",
+          },
+          payment_method: { type: "string", enum: ["cash", "transfer", "qr"], description: "Método de pago" },
+          staff_name: { type: "string", description: "Nombre del mozo/vendedor" },
+          table_number: { type: "string", description: "Número de mesa (opcional)" },
+          concept: { type: "string", description: "Concepto o nota de la venta" },
+          payment_status: { type: "string", enum: ["cobrado", "no_cobrado"], description: "Estado de pago (por defecto cobrado)" },
+        },
+        required: ["items", "payment_method"],
+      },
+    },
+  },
 ];
 
 // Execute a tool call
