@@ -459,6 +459,45 @@ async function executeTool(supabase: any, name: string, args: any): Promise<stri
         return JSON.stringify({ results });
       }
 
+      case "create_sale": {
+        const saleItems: any[] = [];
+        let totalAmount = 0;
+        for (const item of args.items) {
+          const { data: product } = await supabase.from("products").select("id, sale_price, quantity").ilike("name", `%${item.product_name}%`).limit(1).single();
+          const unitPrice = item.unit_price || (product ? product.sale_price : 0);
+          const itemTotal = unitPrice * item.quantity;
+          totalAmount += itemTotal;
+          saleItems.push({
+            product_id: product?.id || null,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: unitPrice,
+            total: itemTotal,
+          });
+          if (product) {
+            const newQty = Math.max(0, product.quantity - item.quantity);
+            const newStatus = newQty <= 0 ? 'critical' : newQty <= 5 ? 'low' : 'normal';
+            await supabase.from("products").update({ quantity: newQty, status: newStatus }).eq("id", product.id);
+          }
+        }
+        const pm = args.payment_method || "cash";
+        const { data: sale, error: saleError } = await supabase.from("sales").insert({
+          total_amount: totalAmount,
+          payment_method: pm,
+          payment_status: args.payment_status || "cobrado",
+          staff_name: args.staff_name || "Admin (IA)",
+          table_number: args.table_number || null,
+          concept: args.concept || null,
+          cash_amount: pm === "cash" ? totalAmount : 0,
+          transfer_amount: pm === "transfer" ? totalAmount : 0,
+          qr_amount: pm === "qr" ? totalAmount : 0,
+        }).select().single();
+        if (saleError) return JSON.stringify({ error: saleError.message });
+        const { error: itemsError } = await supabase.from("sale_items").insert(saleItems.map(si => ({ ...si, sale_id: sale.id })));
+        if (itemsError) return JSON.stringify({ error: itemsError.message });
+        return JSON.stringify({ success: true, sale_id: sale.id, total: totalAmount, items_count: saleItems.length });
+      }
+
       default:
         return JSON.stringify({ error: `Herramienta desconocida: ${name}` });
     }
