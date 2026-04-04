@@ -46,6 +46,7 @@ const allNavItems: NavItem[] = [
   { id: 'ticket-verify', path: '/ticket-verify', label: 'Verificar Entradas', icon: ScanLine },
   { id: 'ticket-admin', path: '/ticket-admin', label: 'Admin Entradas', icon: ListChecks },
   { id: 'menu-generator', path: '/menu-generator', label: 'Generar Menú', icon: FileImage },
+  { id: 'cashier-simulation', path: '/cashier-simulation', label: 'Simulación Caja', icon: FlaskConical },
 ];
 
 // Group definitions with the item IDs they contain
