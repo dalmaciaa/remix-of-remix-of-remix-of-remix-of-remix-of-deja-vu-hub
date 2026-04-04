@@ -354,7 +354,7 @@ export default function CashierSimulation() {
                     </div>
                   )}
                 </ScrollArea>
-                <Separator className="my-3" />
+                <div className="my-3 h-px w-full bg-border" />
                 <div className="flex justify-between items-center mb-3">
                   <span className="font-semibold">Total</span>
                   <span className="text-xl font-bold text-primary">${cartTotal.toLocaleString()}</span>
