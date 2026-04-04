@@ -11,7 +11,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -355,7 +354,7 @@ export default function CashierSimulation() {
                     </div>
                   )}
                 </ScrollArea>
-                <Separator className="my-3" />
+                <div className="my-3 h-px w-full bg-border" />
                 <div className="flex justify-between items-center mb-3">
                   <span className="font-semibold">Total</span>
                   <span className="text-xl font-bold text-primary">${cartTotal.toLocaleString()}</span>
