@@ -79,7 +79,7 @@ const navGroups: { label: string; icon: React.ComponentType<{ className?: string
   {
     label: 'Administración',
     icon: Users,
-    itemIds: ['staff', 'events', 'admin-assistant'],
+    itemIds: ['staff', 'events', 'admin-assistant', 'cashier-simulation'],
   },
 ];
 
