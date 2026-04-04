@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Receipt, Menu, X, Wine, LogOut, PartyPopper, ChefHat, Users, UtensilsCrossed, Coffee, Bell, ClipboardList, History, Banknote, DollarSign, ShoppingBasket, Bot, Ticket, ScanLine, ListChecks, FileImage, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Receipt, Menu, X, Wine, LogOut, PartyPopper, ChefHat, Users, UtensilsCrossed, Coffee, Bell, ClipboardList, History, Banknote, DollarSign, ShoppingBasket, Bot, Ticket, ScanLine, ListChecks, FileImage, ChevronDown, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ const allNavItems: NavItem[] = [
   { id: 'ticket-verify', path: '/ticket-verify', label: 'Verificar Entradas', icon: ScanLine },
   { id: 'ticket-admin', path: '/ticket-admin', label: 'Admin Entradas', icon: ListChecks },
   { id: 'menu-generator', path: '/menu-generator', label: 'Generar Menú', icon: FileImage },
+  { id: 'cashier-simulation', path: '/cashier-simulation', label: 'Simulación Caja', icon: FlaskConical },
 ];
 
 // Group definitions with the item IDs they contain
@@ -78,7 +79,7 @@ const navGroups: { label: string; icon: React.ComponentType<{ className?: string
   {
     label: 'Administración',
     icon: Users,
-    itemIds: ['staff', 'events', 'admin-assistant'],
+    itemIds: ['staff', 'events', 'admin-assistant', 'cashier-simulation'],
   },
 ];
 
