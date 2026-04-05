@@ -566,14 +566,31 @@ export default function CashierSimulation() {
       <Dialog open={!!payDialog} onOpenChange={open => !open && setPayDialog(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cobrar Venta Pendiente</DialogTitle>
+            <DialogTitle>
+              {payDialog?.startsWith('table:') 
+                ? `Cobrar Mesa ${payDialog.replace('table:', '')}` 
+                : 'Cobrar Venta Pendiente'}
+            </DialogTitle>
           </DialogHeader>
           {payDialog && (() => {
-            const sale = sales.find(s => s.id === payDialog);
-            if (!sale) return null;
+            const targetSales = getPayDialogSales();
+            const total = getPayDialogTotal();
+            if (targetSales.length === 0) return null;
             return (
               <div className="space-y-3">
-                <p className="text-center text-2xl font-bold">${sale.total.toLocaleString()}</p>
+                <p className="text-center text-2xl font-bold">${total.toLocaleString()}</p>
+                {targetSales.length > 1 && (
+                  <div className="rounded-lg bg-muted/30 p-2 space-y-0.5 max-h-32 overflow-y-auto">
+                    {targetSales.map(s => (
+                      <div key={s.id} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {s.createdAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} · {s.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                        </span>
+                        <span className="font-medium">${s.total.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-1.5">
                   {[
                     { v: 'cash', icon: DollarSign, label: 'Efect.' },
@@ -609,7 +626,7 @@ export default function CashierSimulation() {
                       <Input type="number" placeholder="Transferencia" value={payTransfer} onChange={e => setPayTransfer(e.target.value)} className="h-8" />
                     </div>
                     <p className="text-xs text-center text-muted-foreground">
-                      Suma: ${((parseFloat(payCash) || 0) + (parseFloat(payQr) || 0) + (parseFloat(payTransfer) || 0)).toLocaleString()} / ${sale.total.toLocaleString()}
+                      Suma: ${((parseFloat(payCash) || 0) + (parseFloat(payQr) || 0) + (parseFloat(payTransfer) || 0)).toLocaleString()} / ${total.toLocaleString()}
                     </p>
                   </div>
                 )}
