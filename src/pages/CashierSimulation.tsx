@@ -219,6 +219,37 @@ export default function CashierSimulation() {
   const totalTickets = ticketSales.reduce((sum, s) => sum + s.total, 0);
   const pendingSales = sales.filter(s => s.paymentStatus === 'no_cobrado');
 
+  // Group pending by table
+  const pendingByTable = useMemo(() => {
+    const groups: Record<string, SimSale[]> = {};
+    pendingSales.forEach(s => {
+      const key = s.tableNumber || 'S/M';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    return groups;
+  }, [pendingSales]);
+
+  // Get total for pay dialog (single sale or table group)
+  const getPayDialogTotal = (): number => {
+    if (!payDialog) return 0;
+    if (payDialog.startsWith('table:')) {
+      const table = payDialog.replace('table:', '');
+      return (pendingByTable[table] || []).reduce((sum, s) => sum + s.total, 0);
+    }
+    return sales.find(s => s.id === payDialog)?.total || 0;
+  };
+
+  const getPayDialogSales = (): SimSale[] => {
+    if (!payDialog) return [];
+    if (payDialog.startsWith('table:')) {
+      const table = payDialog.replace('table:', '');
+      return pendingByTable[table] || [];
+    }
+    const sale = sales.find(s => s.id === payDialog);
+    return sale ? [sale] : [];
+  };
+
   const resetAll = () => {
     setSales([]); setTicketSales([]); setCart([]); setTableNumber('');
     toast.success('Simulación reiniciada');
