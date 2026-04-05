@@ -437,23 +437,31 @@ export default function CashierSimulation() {
                 {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </div>
               {showHistory && (
-                <div className="px-3 pb-2 space-y-1 max-h-40 overflow-y-auto">
-                  {pendingSales.map(s => (
-                    <div key={s.id} className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs">
-                      <div>
-                        <span className="font-medium">{s.tableNumber}</span>
-                        <span className="text-muted-foreground ml-1">
-                          {s.createdAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                <div className="px-3 pb-2 space-y-2 max-h-52 overflow-y-auto">
+                  {Object.entries(pendingByTable).map(([table, tableSales]) => {
+                    const tableTotal = tableSales.reduce((sum, s) => sum + s.total, 0);
+                    return (
+                      <div key={table} className="rounded-lg border bg-muted/20 p-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold">{table}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-primary">${tableTotal.toLocaleString()}</span>
+                            <Button size="sm" variant="default" className="h-6 text-[10px] px-2" onClick={() => { setPayDialog(`table:${table}`); setPayMethod('cash'); }}>
+                              Cobrar todo
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-0.5">
+                          {tableSales.map(s => (
+                            <div key={s.id} className="flex justify-between text-[11px] text-muted-foreground">
+                              <span>{s.createdAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} · {s.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</span>
+                              <span className="font-medium text-foreground">${s.total.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">${s.total.toLocaleString()}</span>
-                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => { setPayDialog(s.id); setPayMethod('cash'); }}>
-                          Cobrar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card>
