@@ -158,7 +158,7 @@ export default function CashierSimulation() {
     };
     setSales(prev => [sale, ...prev]);
     setCart([]);
-    setTableNumber('');
+    // Keep tableNumber so it accumulates across sales
     toast.success(status === 'cobrado' ? '✅ Venta cobrada' : '⏳ Venta pendiente');
   };
 
