@@ -183,24 +183,33 @@ export default function CashierSimulation() {
 
   const collectPayment = () => {
     if (!payDialog) return;
-    const sale = sales.find(s => s.id === payDialog);
-    if (!sale) return;
+    const targetSales = getPayDialogSales();
+    const totalToPay = getPayDialogTotal();
+    if (targetSales.length === 0) return;
+
     const cash = parseFloat(payCash) || 0;
     const qr = parseFloat(payQr) || 0;
     const transfer = parseFloat(payTransfer) || 0;
-    if (payMethod === 'mixed' && Math.abs(cash + qr + transfer - sale.total) > 0.01) {
+    if (payMethod === 'mixed' && Math.abs(cash + qr + transfer - totalToPay) > 0.01) {
       toast.error('El total no coincide');
       return;
     }
-    setSales(prev => prev.map(s => s.id === payDialog ? {
-      ...s, paymentStatus: 'cobrado', paymentMethod: payMethod,
-      cashAmount: payMethod === 'mixed' ? cash : payMethod === 'cash' ? sale.total : 0,
-      qrAmount: payMethod === 'mixed' ? qr : payMethod === 'qr' ? sale.total : 0,
-      transferAmount: payMethod === 'mixed' ? transfer : payMethod === 'transfer' ? sale.total : 0,
-    } : s));
+
+    const saleIds = new Set(targetSales.map(s => s.id));
+    setSales(prev => prev.map(s => {
+      if (!saleIds.has(s.id)) return s;
+      // Distribute proportionally for mixed, or assign method
+      const ratio = s.total / totalToPay;
+      return {
+        ...s, paymentStatus: 'cobrado' as const, paymentMethod: payMethod,
+        cashAmount: payMethod === 'mixed' ? Math.round(cash * ratio * 100) / 100 : payMethod === 'cash' ? s.total : 0,
+        qrAmount: payMethod === 'mixed' ? Math.round(qr * ratio * 100) / 100 : payMethod === 'qr' ? s.total : 0,
+        transferAmount: payMethod === 'mixed' ? Math.round(transfer * ratio * 100) / 100 : payMethod === 'transfer' ? s.total : 0,
+      };
+    }));
     setPayDialog(null);
     setPayMethod('cash'); setPayCash(''); setPayQr(''); setPayTransfer('');
-    toast.success('✅ Cobro registrado');
+    toast.success(`✅ ${targetSales.length > 1 ? `${targetSales.length} ventas cobradas` : 'Cobro registrado'}`);
   };
 
   const createTicketSale = () => {
