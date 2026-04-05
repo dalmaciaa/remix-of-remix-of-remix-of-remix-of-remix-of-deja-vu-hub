@@ -82,8 +82,8 @@ export default function CashierSimulation() {
   const [ticketPrice, setTicketPrice] = useState('');
   const [ticketQty, setTicketQty] = useState('1');
 
-  // Payment dialog
-  const [payDialog, setPayDialog] = useState<string | null>(null);
+  // Payment dialog — now supports table-grouped payment
+  const [payDialog, setPayDialog] = useState<string | null>(null); // sale id or "table:XXX"
   const [payMethod, setPayMethod] = useState('cash');
   const [payCash, setPayCash] = useState('');
   const [payQr, setPayQr] = useState('');
