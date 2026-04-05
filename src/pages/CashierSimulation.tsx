@@ -82,8 +82,8 @@ export default function CashierSimulation() {
   const [ticketPrice, setTicketPrice] = useState('');
   const [ticketQty, setTicketQty] = useState('1');
 
-  // Payment dialog
-  const [payDialog, setPayDialog] = useState<string | null>(null);
+  // Payment dialog — now supports table-grouped payment
+  const [payDialog, setPayDialog] = useState<string | null>(null); // sale id or "table:XXX"
   const [payMethod, setPayMethod] = useState('cash');
   const [payCash, setPayCash] = useState('');
   const [payQr, setPayQr] = useState('');
@@ -183,24 +183,33 @@ export default function CashierSimulation() {
 
   const collectPayment = () => {
     if (!payDialog) return;
-    const sale = sales.find(s => s.id === payDialog);
-    if (!sale) return;
+    const targetSales = getPayDialogSales();
+    const totalToPay = getPayDialogTotal();
+    if (targetSales.length === 0) return;
+
     const cash = parseFloat(payCash) || 0;
     const qr = parseFloat(payQr) || 0;
     const transfer = parseFloat(payTransfer) || 0;
-    if (payMethod === 'mixed' && Math.abs(cash + qr + transfer - sale.total) > 0.01) {
+    if (payMethod === 'mixed' && Math.abs(cash + qr + transfer - totalToPay) > 0.01) {
       toast.error('El total no coincide');
       return;
     }
-    setSales(prev => prev.map(s => s.id === payDialog ? {
-      ...s, paymentStatus: 'cobrado', paymentMethod: payMethod,
-      cashAmount: payMethod === 'mixed' ? cash : payMethod === 'cash' ? sale.total : 0,
-      qrAmount: payMethod === 'mixed' ? qr : payMethod === 'qr' ? sale.total : 0,
-      transferAmount: payMethod === 'mixed' ? transfer : payMethod === 'transfer' ? sale.total : 0,
-    } : s));
+
+    const saleIds = new Set(targetSales.map(s => s.id));
+    setSales(prev => prev.map(s => {
+      if (!saleIds.has(s.id)) return s;
+      // Distribute proportionally for mixed, or assign method
+      const ratio = s.total / totalToPay;
+      return {
+        ...s, paymentStatus: 'cobrado' as const, paymentMethod: payMethod,
+        cashAmount: payMethod === 'mixed' ? Math.round(cash * ratio * 100) / 100 : payMethod === 'cash' ? s.total : 0,
+        qrAmount: payMethod === 'mixed' ? Math.round(qr * ratio * 100) / 100 : payMethod === 'qr' ? s.total : 0,
+        transferAmount: payMethod === 'mixed' ? Math.round(transfer * ratio * 100) / 100 : payMethod === 'transfer' ? s.total : 0,
+      };
+    }));
     setPayDialog(null);
     setPayMethod('cash'); setPayCash(''); setPayQr(''); setPayTransfer('');
-    toast.success('✅ Cobro registrado');
+    toast.success(`✅ ${targetSales.length > 1 ? `${targetSales.length} ventas cobradas` : 'Cobro registrado'}`);
   };
 
   const createTicketSale = () => {
@@ -218,6 +227,37 @@ export default function CashierSimulation() {
   const totalDigital = sales.filter(s => s.paymentStatus === 'cobrado').reduce((sum, s) => sum + (s.qrAmount || 0) + (s.transferAmount || 0), 0);
   const totalTickets = ticketSales.reduce((sum, s) => sum + s.total, 0);
   const pendingSales = sales.filter(s => s.paymentStatus === 'no_cobrado');
+
+  // Group pending by table
+  const pendingByTable = useMemo(() => {
+    const groups: Record<string, SimSale[]> = {};
+    pendingSales.forEach(s => {
+      const key = s.tableNumber || 'S/M';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    return groups;
+  }, [pendingSales]);
+
+  // Get total for pay dialog (single sale or table group)
+  const getPayDialogTotal = (): number => {
+    if (!payDialog) return 0;
+    if (payDialog.startsWith('table:')) {
+      const table = payDialog.replace('table:', '');
+      return (pendingByTable[table] || []).reduce((sum, s) => sum + s.total, 0);
+    }
+    return sales.find(s => s.id === payDialog)?.total || 0;
+  };
+
+  const getPayDialogSales = (): SimSale[] => {
+    if (!payDialog) return [];
+    if (payDialog.startsWith('table:')) {
+      const table = payDialog.replace('table:', '');
+      return pendingByTable[table] || [];
+    }
+    const sale = sales.find(s => s.id === payDialog);
+    return sale ? [sale] : [];
+  };
 
   const resetAll = () => {
     setSales([]); setTicketSales([]); setCart([]); setTableNumber('');
@@ -397,23 +437,31 @@ export default function CashierSimulation() {
                 {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </div>
               {showHistory && (
-                <div className="px-3 pb-2 space-y-1 max-h-40 overflow-y-auto">
-                  {pendingSales.map(s => (
-                    <div key={s.id} className="flex items-center justify-between p-1.5 rounded bg-muted/30 text-xs">
-                      <div>
-                        <span className="font-medium">{s.tableNumber}</span>
-                        <span className="text-muted-foreground ml-1">
-                          {s.createdAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                <div className="px-3 pb-2 space-y-2 max-h-52 overflow-y-auto">
+                  {Object.entries(pendingByTable).map(([table, tableSales]) => {
+                    const tableTotal = tableSales.reduce((sum, s) => sum + s.total, 0);
+                    return (
+                      <div key={table} className="rounded-lg border bg-muted/20 p-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold">{table}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-primary">${tableTotal.toLocaleString()}</span>
+                            <Button size="sm" variant="default" className="h-6 text-[10px] px-2" onClick={() => { setPayDialog(`table:${table}`); setPayMethod('cash'); }}>
+                              Cobrar todo
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-0.5">
+                          {tableSales.map(s => (
+                            <div key={s.id} className="flex justify-between text-[11px] text-muted-foreground">
+                              <span>{s.createdAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} · {s.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</span>
+                              <span className="font-medium text-foreground">${s.total.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">${s.total.toLocaleString()}</span>
-                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => { setPayDialog(s.id); setPayMethod('cash'); }}>
-                          Cobrar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card>
@@ -518,14 +566,31 @@ export default function CashierSimulation() {
       <Dialog open={!!payDialog} onOpenChange={open => !open && setPayDialog(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cobrar Venta Pendiente</DialogTitle>
+            <DialogTitle>
+              {payDialog?.startsWith('table:') 
+                ? `Cobrar Mesa ${payDialog.replace('table:', '')}` 
+                : 'Cobrar Venta Pendiente'}
+            </DialogTitle>
           </DialogHeader>
           {payDialog && (() => {
-            const sale = sales.find(s => s.id === payDialog);
-            if (!sale) return null;
+            const targetSales = getPayDialogSales();
+            const total = getPayDialogTotal();
+            if (targetSales.length === 0) return null;
             return (
               <div className="space-y-3">
-                <p className="text-center text-2xl font-bold">${sale.total.toLocaleString()}</p>
+                <p className="text-center text-2xl font-bold">${total.toLocaleString()}</p>
+                {targetSales.length > 1 && (
+                  <div className="rounded-lg bg-muted/30 p-2 space-y-0.5 max-h-32 overflow-y-auto">
+                    {targetSales.map(s => (
+                      <div key={s.id} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {s.createdAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} · {s.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                        </span>
+                        <span className="font-medium">${s.total.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-1.5">
                   {[
                     { v: 'cash', icon: DollarSign, label: 'Efect.' },
@@ -561,7 +626,7 @@ export default function CashierSimulation() {
                       <Input type="number" placeholder="Transferencia" value={payTransfer} onChange={e => setPayTransfer(e.target.value)} className="h-8" />
                     </div>
                     <p className="text-xs text-center text-muted-foreground">
-                      Suma: ${((parseFloat(payCash) || 0) + (parseFloat(payQr) || 0) + (parseFloat(payTransfer) || 0)).toLocaleString()} / ${sale.total.toLocaleString()}
+                      Suma: ${((parseFloat(payCash) || 0) + (parseFloat(payQr) || 0) + (parseFloat(payTransfer) || 0)).toLocaleString()} / ${total.toLocaleString()}
                     </p>
                   </div>
                 )}
